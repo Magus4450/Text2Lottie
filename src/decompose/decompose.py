@@ -1,3 +1,4 @@
+import os
 import json
 from typing import Any, Dict, List, Union
 
@@ -189,10 +190,24 @@ def remove_animation(lottie: Dict[str, Any]) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    sample_path = "samples/gen_anim.json"
-    out_path = "samples/gen_no_anim.json"
+    input_folder = "generated_data/json"
+    output_folder = "generated_data/static_json"
+    os.makedirs(output_folder, exist_ok=True)
 
-    obj = load_json(sample_path)
-    obj = remove_animation(obj)
-    save_json(out_path, obj)
-    print(f"Saved: {out_path}")
+    for fname in os.listdir(input_folder):
+        if not fname.endswith(".json"):
+            continue
+
+        in_path = os.path.join(input_folder, fname)
+        out_path = os.path.join(output_folder, fname)
+
+        try:
+            obj = load_json(in_path)
+            obj = remove_animation(obj)
+            save_json(out_path, obj)
+            print(f"Processed: {fname}")
+        except Exception as e:
+            print(f"Failed {fname}: {e}")
+
+    print(f"All processed files saved to: {output_folder}")
+
