@@ -16,7 +16,7 @@ def generate_caption(model, processor, image: Image.Image, device: torch.device)
 
 
 def process_folder(input_folder: str, output_folder: str,
-                   model_name: str = "Salesforce/blip2-flan-t5-xl"):
+                   model_name: str = "Salesforce/blip2-opt-2.7b-coco") -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Batch image captioning with BLIP2 (HuggingFace Transformers)")
     parser.add_argument("input_folder", help="Folder containing input images")
     parser.add_argument("output_folder", help="Folder to save caption-text files")
-    parser.add_argument("--model_name", default="Salesforce/blip2-flan-t5-xl",
+    parser.add_argument("--model_name", default="Salesforce/blip2-opt-2.7b-coco",
                         help="BLIP2 model checkpoint on Hugging Face")
     args = parser.parse_args()
 
