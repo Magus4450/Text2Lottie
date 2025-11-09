@@ -4,6 +4,11 @@ samples_mp4
 generated_data
 /spinners
 /arrow*
+/scraped_data
+/squares
+/raw_datasets
+
+**/*.json*
 
 *.zip
 

@@ -63,19 +63,42 @@ def read_text_files(folder: Path) -> Dict[str, str]:
 
 
 def read_json_files_as_string(folder: Path) -> Dict[str, str]:
-    """Return {stem: raw_json_string} for all .json in folder. Missing folder -> {}."""
+    """
+    Return {stem: cleaned_json_string} for all .json in folder.
+    Removes unnecessary Lottie keys that don't affect animation.
+    Missing folder -> {}.
+    """
+    UNNECESSARY_KEYS = {"nm", "mn", "v", "ddd", "sr", "cl", "ln", "bm", "hd"}
+
+    def _clean(obj):
+        if isinstance(obj, dict):
+            return {
+                k: _clean(v)
+                for k, v in obj.items()
+                if k not in UNNECESSARY_KEYS
+            }
+        elif isinstance(obj, list):
+            return [_clean(item) for item in obj]
+        else:
+            return obj
+
     data = {}
     if folder.exists():
         for p in folder.glob("*.json"):
             try:
                 s = p.read_text(encoding="utf-8").strip()
-                # Validate JSON (and pretty-normalize) while preserving original content structure.
                 obj = json.loads(s)
-                data[p.stem] = json.dumps(obj, ensure_ascii=False, separators=(",", ":"), sort_keys=False)
+
+                # Clean the Lottie JSON recursively
+                cleaned = _clean(obj)
+
+                # Serialize back to compact string
+                data[p.stem] = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"), sort_keys=False)
+
             except Exception as e:
                 print(f"[WARN] Failed to read/parse JSON {p}: {e}")
-    return data
 
+    return data
 
 def mk_messages(user_prompt: str, assistant_answer: str) -> List[Dict[str, str]]:
     """Create a chat-format example (system optional; keep simple & universal)."""

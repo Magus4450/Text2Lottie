@@ -25,7 +25,7 @@ TARGET_MODULES = [     # Which layers to apply LoRA to
 ]
 
 # Training Configuration
-BATCH_SIZE = 2                    # Per device batch size
+BATCH_SIZE = 16                    # Per device batch size
 GRADIENT_ACCUMULATION_STEPS = 4   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
 NUM_EPOCHS = 3                    # Number of training epochs
 LEARNING_RATE = 2e-4              # Learning rate
