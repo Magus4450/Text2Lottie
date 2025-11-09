@@ -2,8 +2,10 @@ samples_mp4
 /sample*
 .vscode
 generated_data
+/spinners
+/arrow*
 
-
+*.zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
