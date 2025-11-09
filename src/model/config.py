@@ -62,7 +62,6 @@ REPORT_TO = "none"               # "none", "wandb", "tensorboard"
 # Advanced Settings
 USE_GRADIENT_CHECKPOINTING = "unsloth"  # Save memory at cost of speed
 PACKING = False                          # Pack multiple samples (faster for short sequences)
-DATASET_NUM_PROC = 2                     # Number of processes for data loading
 
 # Inference Configuration
 INFERENCE_MAX_NEW_TOKENS = 4096   # Max tokens to generate during inference

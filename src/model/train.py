@@ -1,3 +1,4 @@
+# src/model/train.py
 import os
 import torch
 import src.model.config as config
@@ -6,14 +7,14 @@ from unsloth import FastLanguageModel
 from trl import SFTTrainer
 from transformers import TrainingArguments, AutoTokenizer
 
-# NEW: import the semantic tokenizer utilities
-from src.model.semantic_tokenizer import LottieSemanticTokenizer
+# Import the semantic tokenizer utilities
+from src.model.semantic_tokenizer import LottieSemanticTokenizer, to_semantic
 
 # -------------------------
 # Config fallbacks (edit in config.py if you like)
 # -------------------------
 DATASET_JSONL = getattr(config, "DATASET_JSONL", "instruction_dataset.jsonl")
-DATA_FILES = getattr(config, "DATA_FILES", None)  # e.g., {"train": "train.jsonl", "validation": "val.jsonl"}
+DATA_FILES = getattr(config, "DATA_FILES", None)  # e.g., {"train":"train.jsonl","validation":"val.jsonl"}
 VAL_SPLIT = getattr(config, "VAL_SPLIT", 0.02)
 TEST_SPLIT = getattr(config, "TEST_SPLIT", 0.02)
 DATASET_NUM_PROC = getattr(config, "DATASET_NUM_PROC", 4)
@@ -39,18 +40,17 @@ except Exception:
     pass
 
 # -------------------------
-# Lottie semantic tokenizer (adds tokens + provides encode_preprocess)
+# Lottie semantic tokenizer (adds tokens + provides to_semantic())
 # -------------------------
-# This will add the <...> key tags and common literal patterns like `"a":0`
-# to the base tokenizer's vocabulary.
 print("Augmenting tokenizer with Lottie semantic tags/patterns...")
+# This adds <...> key tags and common literal patterns (e.g. '"a":0') to vocab
 _ = LottieSemanticTokenizer(tokenizer, add_as_special_tokens=False)
 
-# Make sure model embeddings fit the expanded vocab
+# Ensure embeddings match new vocab size
 try:
     model.resize_token_embeddings(len(tokenizer))
 except Exception:
-    # Some Unsloth models handle this internally; ignore if unsupported.
+    # Some Unsloth models manage this internally; safe to ignore if unsupported
     pass
 
 # -------------------------
@@ -75,7 +75,7 @@ model = FastLanguageModel.get_peft_model(
 # -------------------------
 def _load_chat_dataset():
     """
-    Loads JSON or JSONL with rows like:
+    Loads JSON/JSONL with rows like:
       {"id": "...",
        "messages": [{"role":"user","content":"..."}, {"role":"assistant","content":"..."}],
        "metadata": {...}}
@@ -84,10 +84,8 @@ def _load_chat_dataset():
     if DATA_FILES and isinstance(DATA_FILES, dict):
         print(f"Loading dataset from files: {DATA_FILES}")
         ds = load_dataset("json", data_files=DATA_FILES)
-        # Ensure there is a 'train' split at least
         if "train" not in ds:
             raise ValueError("DATA_FILES must include at least a 'train' split.")
-        # If there's no validation/test, create them from train
         dd = DatasetDict()
         dd["train"] = ds["train"]
         if "validation" in ds:
@@ -145,12 +143,8 @@ def _apply_chat_template(example):
         tokenize=False,
         add_generation_prompt=False,
     )
-    # 2) Convert Lottie JSON code blocks to semantic tags inside fences
-    #    This keeps everything reversible and only affects ```json/```lottie code blocks.
-    text = LottieSemanticTokenizer.encode_preprocess.__func__(None, text)  # call static-style
-    # Alternatively, if you prefer explicit import:
-    # from lottie_semantic_tokenizer import to_semantic
-    # text = to_semantic(text)
+    # 2) Convert only fenced ```json / ```lottie blocks to semantic tags
+    text = to_semantic(text)
     return {"text": text}
 
 for split in list(dataset_splits.keys()):
@@ -197,7 +191,7 @@ trainer = SFTTrainer(
     tokenizer=tokenizer,
     train_dataset=dataset_splits["train"],
     eval_dataset=dataset_splits.get("validation", None),
-    dataset_text_field="text",                   # we created this via chat template + semantic pass
+    dataset_text_field="text",                   # created via chat template + semantic pass
     max_seq_length=config.MAX_SEQ_LENGTH,
     dataset_num_proc=DATASET_NUM_PROC,
     packing=config.PACKING,                      # if True, sequences may be packed up to max_seq_length
