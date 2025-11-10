@@ -20,9 +20,10 @@ print("Loading base model and tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
 model = AutoModelForCausalLM.from_pretrained(
     config.MODEL_NAME,
-    torch_dtype=config.DTYPE,
+    # torch_dtype=config.DTYPE,
     device_map="auto",
 )
+print(model.dtype, next(model.parameters()).device)
 
 # -----------------------------
 # Augment tokenizer with Lottie semantic tags
@@ -46,6 +47,7 @@ if tokenizer.pad_token is None:
 model.get_input_embeddings().requires_grad_(True)
 model.get_output_embeddings().requires_grad_(True)
 
+model.gradient_checkpointing_enable()
 
 # -----------------------------
 # Load train/val/test datasets
@@ -91,7 +93,7 @@ for split in list(dataset_splits.keys()):
     )
 
 print({k: len(v) for k, v in dataset_splits.items()})
-print("Example formatted text:\n", dataset_splits["train"][0]["text"][:400])
+print("Example formatted text:\n", dataset_splits["train"][0]["text"])
 
 
 # -----------------------------
@@ -120,8 +122,8 @@ sample = tokenized["train"][0]
 print("Token IDs:", sample["input_ids"][:100])  # first 50 token IDs
 print("Decoded text:", tokenizer.decode(sample["input_ids"])[:100])
 
-for tok in sample["input_ids"][:100]:
-    print(tok, tokenizer.decode(tok))
+# for tok in sample["input_ids"][:100]:
+#     print(tok, tokenizer.decode(tok))
 
 # -----------------------------
 # Data collator
@@ -148,11 +150,12 @@ training_args = TrainingArguments(
     load_best_model_at_end=config.LOAD_BEST_MODEL,
     lr_scheduler_type=config.LR_SCHEDULER,
     optim=config.OPTIMIZER,
-    fp16=torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
-    bf16=torch.cuda.is_bf16_supported(),
+    fp16=True,
+    bf16=False,
     seed=config.SHUFFLE_SEED,
     report_to=config.REPORT_TO,
     gradient_checkpointing=getattr(config, "USE_GRADIENT_CHECKPOINTING", False),
+    use_cache=False
 )
 
 # -----------------------------

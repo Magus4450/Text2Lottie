@@ -1,19 +1,10 @@
-"""
-Configuration file for fine-tuning.
-Modify these settings according to your needs.
-"""
 
 # Model Configuration
-MODEL_NAME = "meta-llama/Llama-3.2-1B-Instruct"  # Change if not available
-# Alternatives:
-#   - "unsloth/Qwen2.5-Coder-7B-Instruct" (recommended for JSON)
-#   - "unsloth/Qwen2.5-7B-Instruct"
-#   - "unsloth/llama-3-8b-Instruct"
-#   - "unsloth/mistral-7b-instruct-v0.3"
+MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct" 
 
-MAX_SEQ_LENGTH = 4096  # Maximum sequence length (reduce if OOM)
-LOAD_IN_4BIT = True    # Use 4-bit quantization (recommended)
-DTYPE = None           # None for auto, "float16" or "bfloat16"
+MAX_SEQ_LENGTH = 512  # Maximum sequence length (reduce if OOM)
+LOAD_IN_4BIT = False    # Use 4-bit quantization (recommended)
+DTYPE = "float16"           # None for auto, "float16" or "bfloat16"
 
 # LoRA Configuration
 LORA_R = 16            # LoRA rank (higher = more parameters, better quality)
@@ -27,11 +18,11 @@ TARGET_MODULES = [     # Which layers to apply LoRA to
 # Training Configuration
 BATCH_SIZE = 4                    # Per device batch size
 GRADIENT_ACCUMULATION_STEPS = 4   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
-NUM_EPOCHS = 3                    # Number of training epochs
+NUM_EPOCHS = 5                    # Number of training epochs
 LEARNING_RATE = 2e-4              # Learning rate
 WARMUP_STEPS = 5                  # Number of warmup steps
 WEIGHT_DECAY = 0.01               # Weight decay for regularization
-OPTIMIZER = "adamw_8bit"          # Optimizer (adamw_8bit saves memory)
+OPTIMIZER = "adamw_bnb_8bit"          # Optimizer (adamw_8bit saves memory)
 LR_SCHEDULER = "linear"           # Learning rate scheduler
 
 # Data Configuration
@@ -49,7 +40,7 @@ SHUFFLE_SEED = 3407               # Random seed for shuffling
 
 # Output Configuration
 OUTPUT_DIR = "outputs"                      # Training checkpoints directory
-MODEL_OUTPUT_DIR = "lottie_model"          # Final model directory
+MODEL_OUTPUT_DIR = "lottie_model_llama_8B"          # Final model directory
 LORA_OUTPUT_DIR = "lottie_model_lora"      # LoRA adapters only directory
 SAVE_STRATEGY = "epoch"                     # When to save checkpoints
 SAVE_TOTAL_LIMIT = 2                        # Maximum number of checkpoints to keep
@@ -63,7 +54,7 @@ LOGGING_STEPS = 1                 # How often to log
 REPORT_TO = "none"               # "none", "wandb", "tensorboard"
 
 # Advanced Settings
-USE_GRADIENT_CHECKPOINTING = "unsloth"  # Save memory at cost of speed
+USE_GRADIENT_CHECKPOINTING = False # Save memory at cost of speed
 PACKING = False                          # Pack multiple samples (faster for short sequences)
 
 # Inference Configuration

@@ -8,31 +8,7 @@ from typing import Any, Dict, List, Optional
 # These strings are added to the tokenizer's vocab so they tend to become
 # single tokens during training/inference. We do not perform replacements for
 # them here—this module only replaces *keys* inside fenced JSON blocks.
-COMMON_VALUES: Dict[str, str] = {
-    # Property animation flags (recommended)
-    '"a":0': '<prop_not_animated>',
-    '"a":1': '<prop_animated>',
-    '"k":': '<prop_k>',
-    '"ix":': '<prop_ix>',
-
-    # Shape type patterns (recommended)
-    '"ty":"gr"': '<shape_ty_gr>',
-    '"ty":"sh"': '<shape_ty_sh>',
-    '"ty":"fl"': '<shape_ty_fl>',
-    '"ty":"st"': '<shape_ty_st>',
-    '"ty":"tr"': '<shape_ty_tr>',
-    '"ty":"tm"': '<shape_ty_tm>',
-
-    # Frequent layer/type literals
-    '"ty":4': '<layer_ty_shape>',
-
-    # A few very common scalars/booleans
-    '0': '<0>',
-    '1': '<1>',
-    '100': '<100>',
-    'true': '<true>',
-    'false': '<false>',
-}
+COMMON_VALUES: Dict[str, str] = dict()
 
 # =============================================================================
 # 1) TAG TABLES (Lottie keys → semantic tags) per your 48-key reference
@@ -317,7 +293,11 @@ def encode_obj(obj: Any, ctx: Ctx) -> str:
 
             if not first:
                 parts.append(",")
-            parts.append(f"{key_txt}:{encode_obj(v, c2)}")
+            if key_txt.startswith("<") and key_txt.endswith(">"):
+                parts.append(f"{key_txt}{encode_obj(v, c2)}")   # colon absorbed into tag
+            else:
+                parts.append(f"{key_txt}:{encode_obj(v, c2)}")
+
             first = False
 
         parts.append("}")
@@ -361,14 +341,14 @@ for table in [
 
 # Token pattern (tags) — replace tags with quoted JSON keys
 _tag_keys = list(REVERSE_TABLE.keys())
-TAG_KEY_RE = re.compile("|".join(map(re.escape, _tag_keys))) if _tag_keys else re.compile(r"$^")
+TAG_KEY_RE = re.compile("|".join(map(re.escape, _tag_keys)))
 
 def decode_tags_to_keys(s: str) -> str:
     """Replace <tag> with the corresponding JSON key (quoted)."""
     def _sub(m):
         tag = m.group(0)
         key = REVERSE_TABLE.get(tag)
-        return f'"{key}"' if key else tag
+        return f'"{key}":' if key else tag
     return TAG_KEY_RE.sub(_sub, s)
 
 # =============================================================================
@@ -459,6 +439,7 @@ if __name__ == "__main__":
 
     # 2) Wrap in a json code-fence (the converter operates inside fences)
     text = f"```json\n{raw_json}\n```"
+    print(text)
 
     # 3) Convert keys to semantic tags
     semantic_text = to_semantic(text)

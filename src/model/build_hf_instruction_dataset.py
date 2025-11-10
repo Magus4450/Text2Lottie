@@ -93,9 +93,11 @@ def read_json_files_as_string(folder: Path) -> Dict[str, str]:
                 # Clean the Lottie JSON recursively
                 cleaned = _clean(obj)
 
-                # Serialize back to compact string
-                data[p.stem] = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"), sort_keys=False)
+                # Serialize back to compact string (no spaces at all)
+                json_str = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"), sort_keys=False)
+                json_str = "".join(json_str.split())  # remove all whitespace characters
 
+                data[p.stem] = json_str
             except Exception as e:
                 print(f"[WARN] Failed to read/parse JSON {p}: {e}")
 
