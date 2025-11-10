@@ -3,3 +3,6 @@ create-dataset:
 
 train:
 	sbatch train.slurm
+
+infer:
+	sbatch infer.slurm
