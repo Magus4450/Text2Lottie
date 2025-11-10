@@ -7,6 +7,12 @@ generated_data
 /scraped_data
 /squares
 /raw_datasets
+/*cache
+
+/lottie_model*
+/outputs
+
+*.out
 
 **/*.json*
 

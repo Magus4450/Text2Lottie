@@ -4,7 +4,7 @@ Modify these settings according to your needs.
 """
 
 # Model Configuration
-MODEL_NAME = "unsloth/Qwen3-8B"  # Change if not available
+MODEL_NAME = "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit"  # Change if not available
 # Alternatives:
 #   - "unsloth/Qwen2.5-Coder-7B-Instruct" (recommended for JSON)
 #   - "unsloth/Qwen2.5-7B-Instruct"
@@ -25,7 +25,7 @@ TARGET_MODULES = [     # Which layers to apply LoRA to
 ]
 
 # Training Configuration
-BATCH_SIZE = 16                    # Per device batch size
+BATCH_SIZE = 4                    # Per device batch size
 GRADIENT_ACCUMULATION_STEPS = 4   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
 NUM_EPOCHS = 3                    # Number of training epochs
 LEARNING_RATE = 2e-4              # Learning rate

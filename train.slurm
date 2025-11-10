@@ -8,7 +8,7 @@
 
 # Activate your environment
 source /apps/local/anaconda3/conda_init.sh
-conda activate text2lottie
+conda activate finetuen
 
 # Run your script
 python -m src.model.train
