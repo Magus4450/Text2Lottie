@@ -1,4 +1,4 @@
-# src/model/train_full.py
+# src/model/train_hf.py
 import os
 import torch
 from datasets import load_dataset, DatasetDict
@@ -47,8 +47,9 @@ model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
 # Ensure tokenizer has a pad token
 # -----------------------------
 if tokenizer.pad_token is None:
-    print("Tokenizer has no pad_token; setting pad_token = eos_token.")
-    tokenizer.pad_token = tokenizer.eos_token
+    print("Tokenizer has no pad_token; adding <pad> token.")
+    tokenizer.add_special_tokens({'pad_token': '<pad>'})
+    model.resize_token_embeddings(len(tokenizer))
 
 # Ensure embeddings are trainable
 model.get_input_embeddings().requires_grad_(True)
@@ -162,7 +163,6 @@ training_args = TrainingArguments(
     seed=config.SHUFFLE_SEED,
     report_to=config.REPORT_TO,
     gradient_checkpointing=getattr(config, "USE_GRADIENT_CHECKPOINTING", False),
-    use_cache=False
 )
 
 # -----------------------------
