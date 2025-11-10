@@ -12,6 +12,13 @@ from transformers import (
 from src.model.semantic_tokenizer import LottieSemanticTokenizer, to_semantic
 import src.model.config as config
 
+if torch.cuda.is_available():
+    for i in range(torch.cuda.device_count()):
+        print(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+        print(f"  Total Memory: {torch.cuda.get_device_properties(i).total_memory / 1024**3:.2f} GB")
+else:
+    print("No CUDA device detected.")
+
 
 # -----------------------------
 # Load base model and tokenizer
