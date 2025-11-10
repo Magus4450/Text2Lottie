@@ -32,6 +32,7 @@ Output
 
 import os
 import json
+import random
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -260,17 +261,52 @@ def main():
         print(f"       normal_fwd={ctr.normal_fwd} normal_rev={ctr.normal_rev} "
               f"static_fwd={ctr.static_fwd} static_rev={ctr.static_rev} static_aug_anim={ctr.static_aug_anim}")
 
-    # Write JSONL
-    with open(OUTPUT_JSONL, "w", encoding="utf-8") as f:
-        for ex in all_examples:
-            obj = {"id": ex.id, "messages": ex.messages, "metadata": ex.metadata}
-            f.write(json.dumps(obj, ensure_ascii=False) + "\n")
-    print(f"[OK] Wrote {len(all_examples)} examples -> {OUTPUT_JSONL}")
+    print(f"[INFO] Total examples collected: {len(all_examples)}")
+
+    # --------------------------
+    # Shuffle and split
+    # --------------------------
+    random.seed(42)
+    random.shuffle(all_examples)
+
+    n = len(all_examples)
+    n_train = int(n * 0.9)
+    n_val = int(n * 0.05)
+    n_test = n - n_train - n_val
+
+    train_set = all_examples[:n_train]
+    val_set = all_examples[n_train:n_train + n_val]
+    test_set = all_examples[n_train + n_val:]
+
+    def write_jsonl(filename: str, data: List[Example]):
+        with open(filename, "w", encoding="utf-8") as f:
+            for ex in data:
+                f.write(json.dumps({
+                    "id": ex.id,
+                    "messages": ex.messages,
+                    "metadata": ex.metadata
+                }, ensure_ascii=False) + "\n")
+        print(f"[OK] Wrote {len(data)} examples -> {filename}")
+
+    # --------------------------
+    # Write splits
+    # --------------------------
+    write_jsonl("train.jsonl", train_set)
+    write_jsonl("val.jsonl", val_set)
+    write_jsonl("test.jsonl", test_set)
 
     # Write stats
     with open(STATS_JSON, "w", encoding="utf-8") as f:
-        json.dump(totals, f, ensure_ascii=False, indent=2)
+        json.dump({
+            "totals": totals,
+            "split_counts": {
+                "train": len(train_set),
+                "val": len(val_set),
+                "test": len(test_set)
+            }
+        }, f, ensure_ascii=False, indent=2)
     print(f"[OK] Wrote stats -> {STATS_JSON}")
+
 
 
 if __name__ == "__main__":

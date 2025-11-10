@@ -12,9 +12,11 @@ import os
 import json
 import torch
 import argparse
+import unsloth
 from transformers import AutoTokenizer, pipeline
 from unsloth import FastLanguageModel
-from src.model.semantic_tokenizer import LottieSemanticTokenizer, to_semantic
+from peft import PeftModel
+from src.model.semantic_tokenizer import LottieSemanticTokenizer, to_semantic, from_semantic
 import src.model.config as config
 
 
@@ -35,23 +37,55 @@ def parse_args():
 # -----------------------------------------------------------------------------
 # Load model & tokenizer
 # -----------------------------------------------------------------------------
+# def load_model_and_tokenizer():
+#     print(f"Loading model from: {config.MODEL_OUTPUT_DIR}")
+#     model, tokenizer = FastLanguageModel.from_pretrained(
+#         model_name=config.MODEL_OUTPUT_DIR,
+#         max_seq_length=config.MAX_SEQ_LENGTH,
+#         dtype=config.DTYPE,
+#         load_in_4bit=config.LOAD_IN_4BIT,
+#     )
+
+#     # Right padding for causal models
+#     tokenizer.padding_side = "right"
+
+#     # Add semantic tokenizer augmentation
+#     print("Augmenting tokenizer with Lottie semantic tags...")
+#     tokenizer = LottieSemanticTokenizer(tokenizer, add_as_special_tokens=True).tokenizer
+#     model.resize_token_embeddings(len(tokenizer))
+
+#     return model, tokenizer
 def load_model_and_tokenizer():
-    print(f"Loading model from: {config.MODEL_OUTPUT_DIR}")
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=config.MODEL_OUTPUT_DIR,
+    print(f"Base model: {config.MODEL_NAME}")
+    print(f"Adapter dir: {config.MODEL_OUTPUT_DIR}")
+
+    # 1️⃣ Load tokenizer and re-add semantic tokens
+    tokenizer = AutoTokenizer.from_pretrained(config.MODEL_OUTPUT_DIR)
+    tokenizer.padding_side = "right"
+    _ = LottieSemanticTokenizer(tokenizer, add_as_special_tokens=True)
+    vocab_size = len(tokenizer)
+    print("Vocab size:", vocab_size)
+
+    # 2️⃣ Load base model
+    model, _ = FastLanguageModel.from_pretrained(
+        model_name=config.MODEL_NAME,
         max_seq_length=config.MAX_SEQ_LENGTH,
         dtype=config.DTYPE,
         load_in_4bit=config.LOAD_IN_4BIT,
+        device_map="auto"
     )
 
-    # Right padding for causal models
-    tokenizer.padding_side = "right"
+    # 3️⃣ Resize embeddings for the semantic tokens
+    model.resize_token_embeddings(vocab_size)
 
-    # Add semantic tokenizer augmentation
-    print("Augmenting tokenizer with Lottie semantic tags...")
-    tokenizer = LottieSemanticTokenizer(tokenizer, add_as_special_tokens=True).tokenizer
-    model.resize_token_embeddings(len(tokenizer))
+    # 4️⃣ Load LoRA adapter on top
+    model = PeftModel.from_pretrained(model, config.MODEL_OUTPUT_DIR)
 
+    # 5️⃣ Move to GPU if available
+    if torch.cuda.is_available():
+        model = model.to("cuda")
+
+    print("✅ Model and adapter successfully loaded.")
     return model, tokenizer
 
 
@@ -81,6 +115,10 @@ def generate(model, tokenizer, prompt_text, args):
         pad_token_id=tokenizer.eos_token_id,
     )
     decoded = tokenizer.decode(output[0], skip_special_tokens=True)
+
+    # Convert semantic tags <...> → actual JSON keys
+    decoded = from_semantic(decoded)
+
     return decoded
 
 

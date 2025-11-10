@@ -438,6 +438,10 @@ class LottieSemanticTokenizer:
         else:
             self.base.add_tokens(list(new_tokens), special_tokens=False)
 
+    def __len__(self):
+        """Return the total vocab size of the underlying tokenizer."""
+        return len(self.base)
+
     def encode_preprocess(self, text: str) -> str:
         return to_semantic(text)
 

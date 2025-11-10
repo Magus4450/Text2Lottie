@@ -4,14 +4,14 @@ Modify these settings according to your needs.
 """
 
 # Model Configuration
-MODEL_NAME = "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit"  # Change if not available
+MODEL_NAME = "meta-llama/Llama-3.2-1B-Instruct"  # Change if not available
 # Alternatives:
 #   - "unsloth/Qwen2.5-Coder-7B-Instruct" (recommended for JSON)
 #   - "unsloth/Qwen2.5-7B-Instruct"
 #   - "unsloth/llama-3-8b-Instruct"
 #   - "unsloth/mistral-7b-instruct-v0.3"
 
-MAX_SEQ_LENGTH = 8192  # Maximum sequence length (reduce if OOM)
+MAX_SEQ_LENGTH = 4096  # Maximum sequence length (reduce if OOM)
 LOAD_IN_4BIT = True    # Use 4-bit quantization (recommended)
 DTYPE = None           # None for auto, "float16" or "bfloat16"
 
@@ -36,6 +36,9 @@ LR_SCHEDULER = "linear"           # Learning rate scheduler
 
 # Data Configuration
 DATASET_JSONL = "instruction_dataset.jsonl"
+DATASET_TRAIN = "train.jsonl"
+DATASET_TEST = "test.jsonl"
+DATASET_VAL = "val.jsonl"
 DATASET_NUM_PROC = 4  # map workers
 TRAIN_SPLIT = 0.8                 # 80% for training
 VAL_SPLIT = 0.1                   # 10% for validation

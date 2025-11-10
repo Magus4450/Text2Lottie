@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=finetune_qwen3_8b
-#SBATCH --output=finetune_qwen3_8b_%j.out
+#SBATCH --job-name=finetune_llama_3
+#SBATCH --output=finetune_llama_3_%j.out
 #SBATCH --gres=gpu:1
 #SBATCH --time=12:00:00
 #SBATCH --mem=32G
@@ -11,4 +11,4 @@ source /apps/local/anaconda3/conda_init.sh
 conda activate finetuen
 
 # Run your script
-python -m src.model.train
+python -m src.model.train_hf
