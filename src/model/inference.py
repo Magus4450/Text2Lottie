@@ -95,14 +95,14 @@ def generate_response(prompt: str, max_new_tokens: int = 512, temperature: float
 if __name__ == "__main__":
     # prompt = "What does the following lottie JSON animation represent?\n```json\n{\"fr\":60,\"ip\":0,\"op\":120,\"w\":512,\"h\":512,\"assets\":[],\"layers\":[{\"ind\":1,\"ty\":4,\"ks\":{\"o\":{\"a\":0,\"k\":100},\"r\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[0],\"e\":[0],\"i\":{\"x\":[0.67],\"y\":[1.0]},\"o\":{\"x\":[0.33],\"y\":[0.0]}},{\"t\":120}]},\"p\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[256.0,256.0],\"e\":[256.0,256.0],\"i\":{\"x\":[0.67,0.67],\"y\":[1.0,1.0]},\"o\":{\"x\":[0.33,0.33],\"y\":[0.0,0.0]}},{\"t\":120}]},\"a\":{\"a\":0,\"k\":[0,0,0]},\"s\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[100,100,100],\"e\":[150.0,150.0,100],\"i\":{\"x\":[0.67,0.67,0.67],\"y\":[1.0,1.0,1.0]},\"o\":{\"x\":[0.33,0.33,0.33],\"y\":[0.0,0.0,0.0]}},{\"t\":120}]}},\"ao\":0,\"shapes\":[{\"ty\":\"gr\",\"it\":[{\"ty\":\"el\",\"p\":{\"a\":0,\"k\":[0,0]},\"s\":{\"a\":0,\"k\":[100,100]}},{\"ty\":\"st\",\"c\":{\"a\":0,\"k\":[0.0,0.0,0.0,1]},\"o\":{\"a\":0,\"k\":100},\"w\":{\"a\":0,\"k\":8},\"lc\":2,\"lj\":2,\"ml\":4},{\"ty\":\"tr\",\"p\":{\"a\":0,\"k\":[0,0]},\"a\":{\"a\":0,\"k\":[0,0]},\"s\":{\"a\":0,\"k\":[100,100]},\"r\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[0],\"e\":[-90.0],\"i\":{\"x\":[0.67],\"y\":[1.0]},\"o\":{\"x\":[0.33],\"y\":[0.0]}},{\"t\":120}]},\"o\":{\"a\":0,\"k\":100}}]}],\"ip\":0,\"op\":120,\"st\":0}]}\n```"
     prompts = {
-        normal: "Generate a lottie JSON animation given the following description: ",
-        static: "Given a static lottie JSON animation, add animation with the given description.\n\nStatic:\n",
-        rev: "What does the following lottie JSON animation represent?\n"
+        "normal": "Generate a lottie JSON animation given the following description: ",
+        "static": "Given a static lottie JSON animation, add animation with the given description.\n\nStatic:\n",
+        "rev": "What does the following lottie JSON animation represent?\n"
     }
 
     while True:
         type_ = input("type>")
-        user = input("prompt")
+        user = input("prompt>")
         prompt = prompts[type_] + user
 
         print(f"\nPrompt:\n{prompt}")

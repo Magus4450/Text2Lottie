@@ -1,8 +1,8 @@
 
 # Model Configuration
-MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct" 
+MODEL_NAME = "meta-llama/Llama-3.2-1B-Instruct" 
 
-MAX_SEQ_LENGTH = 4096  # Maximum sequence length (reduce if OOM)
+MAX_SEQ_LENGTH = 2048  # Maximum sequence length (reduce if OOM)
 LOAD_IN_4BIT = False    # Use 4-bit quantization (recommended)
 DTYPE = "float16"           # None for auto, "float16" or "bfloat16"
 
@@ -17,11 +17,12 @@ TARGET_MODULES = [     # Which layers to apply LoRA to
 ]
 
 # Training Configuration
-BATCH_SIZE = 4                    # Per device batch size
+BATCH_SIZE = 2                    # Per device batch size
 GRADIENT_ACCUMULATION_STEPS = 4   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
 NUM_EPOCHS = 5                    # Number of training epochs
 LEARNING_RATE = 2e-4              # Learning rate
 WARMUP_STEPS = 5                  # Number of warmup steps
+WARMUP_RATIO = 0.03
 WEIGHT_DECAY = 0.01               # Weight decay for regularization
 OPTIMIZER = "adamw_bnb_8bit"          # Optimizer (adamw_8bit saves memory)
 LR_SCHEDULER = "linear"           # Learning rate scheduler
@@ -31,10 +32,10 @@ DATASET_JSONL = "instruction_dataset.jsonl"
 DATASET_TRAIN = "train.jsonl"
 DATASET_TEST = "test.jsonl"
 DATASET_VAL = "val.jsonl"
-DATASET_NUM_PROC = 1  # map workers
-TRAIN_SPLIT = 0.8                 # 80% for training
-VAL_SPLIT = 0.1                   # 10% for validation
-TEST_SPLIT = 0.1                  # 10% for testing
+DATASET_NUM_PROC = 24  # map workers
+TRAIN_SPLIT = 0.9                 # 80% for training
+VAL_SPLIT = 0.05                   # 10% for validation
+TEST_SPLIT = 0.05                  # 10% for testing
 SHUFFLE_SEED = 3407               # Random seed for shuffling
 
 
@@ -43,16 +44,19 @@ SHUFFLE_SEED = 3407               # Random seed for shuffling
 OUTPUT_DIR = "outputs"                      # Training checkpoints directory
 MODEL_OUTPUT_DIR = "lottie_model_llama_8B"          # Final model directory
 LORA_OUTPUT_DIR = "lottie_model_lora"      # LoRA adapters only directory
-SAVE_STRATEGY = "epoch"                     # When to save checkpoints
+SAVE_STRATEGY = "steps"                     # When to save checkpoints
 SAVE_TOTAL_LIMIT = 2                        # Maximum number of checkpoints to keep
 
 # Evaluation Configuration
-EVAL_STRATEGY = "epoch"           # When to evaluate
+EVAL_STRATEGY = "steps"           # When to evaluate
+EVAL_STEPS = 500
+SAVE_STEPS = 500
+METRIC_FOR_BEST_MODEL="eval_loss"
 LOAD_BEST_MODEL = True           # Load best model at end based on eval loss
 
 # Logging Configuration
-LOGGING_STEPS = 1                 # How often to log
-REPORT_TO = "none"               # "none", "wandb", "tensorboard"
+LOGGING_STEPS = 10                 # How often to log
+REPORT_TO = ["wandb"]               # "none", "wandb", "tensorboard"
 
 # Advanced Settings
 USE_GRADIENT_CHECKPOINTING = True # Save memory at cost of speed

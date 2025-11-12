@@ -14,6 +14,9 @@ from src.model.semantic_tokenizer import LottieSemanticTokenizer, to_semantic
 import src.model.config as config
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
+import wandb
+wandb.init(project="lottie-llama3-finetune")
+
 if torch.cuda.is_available():
     for i in range(torch.cuda.device_count()):
         print(f"GPU {i}: {torch.cuda.get_device_name(i)}")
@@ -177,16 +180,21 @@ training_args = TrainingArguments(
     per_device_train_batch_size=config.BATCH_SIZE,          # 1
     per_device_eval_batch_size=config.BATCH_SIZE,
     gradient_accumulation_steps=config.GRADIENT_ACCUMULATION_STEPS,  # 2
-    learning_rate=config.LEARNING_RATE,                     # 2e-4 ok for LoRA
-    warmup_steps=config.WARMUP_STEPS,
+    learning_rate=config.LEARNING_RATE,
+    # warmup_steps=config.WARMUP_STEPS,
+    warmup_ratio=config.WARMUP_RATIO,
     num_train_epochs=config.NUM_EPOCHS,
     weight_decay=config.WEIGHT_DECAY,
     logging_steps=config.LOGGING_STEPS,
     save_strategy=config.SAVE_STRATEGY,
     save_total_limit=config.SAVE_TOTAL_LIMIT,
     eval_strategy=config.EVAL_STRATEGY,
+    eval_steps=config.EVAL_STEPS,
+    save_steps=config.SAVE_STEPS,
     load_best_model_at_end=config.LOAD_BEST_MODEL,
     lr_scheduler_type=config.LR_SCHEDULER,
+    metric_for_best_model=config.METRIC_FOR_BEST_MODEL,
+    greater_is_better=False,
     optim="adamw_bnb_8bit",                                 # << memory-light
     fp16=True, bf16=False,
     seed=config.SHUFFLE_SEED,
