@@ -1,8 +1,8 @@
 
 # Model Configuration
-MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct" 
+MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct" 
 
-MAX_SEQ_LENGTH = 512  # Maximum sequence length (reduce if OOM)
+MAX_SEQ_LENGTH = 4096  # Maximum sequence length (reduce if OOM)
 LOAD_IN_4BIT = False    # Use 4-bit quantization (recommended)
 DTYPE = "float16"           # None for auto, "float16" or "bfloat16"
 
@@ -12,12 +12,13 @@ LORA_ALPHA = 16        # LoRA alpha (typically same as rank)
 LORA_DROPOUT = 0       # LoRA dropout (0 is optimized)
 TARGET_MODULES = [     # Which layers to apply LoRA to
     "q_proj", "k_proj", "v_proj", "o_proj",
-    "gate_proj", "up_proj", "down_proj"
+    "gate_proj", "up_proj", "down_proj",
+    "embed_tokens",
 ]
 
 # Training Configuration
-BATCH_SIZE = 2                    # Per device batch size
-GRADIENT_ACCUMULATION_STEPS = 2   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
+BATCH_SIZE = 4                    # Per device batch size
+GRADIENT_ACCUMULATION_STEPS = 4   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
 NUM_EPOCHS = 5                    # Number of training epochs
 LEARNING_RATE = 2e-4              # Learning rate
 WARMUP_STEPS = 5                  # Number of warmup steps
@@ -30,7 +31,7 @@ DATASET_JSONL = "instruction_dataset.jsonl"
 DATASET_TRAIN = "train.jsonl"
 DATASET_TEST = "test.jsonl"
 DATASET_VAL = "val.jsonl"
-DATASET_NUM_PROC = 4  # map workers
+DATASET_NUM_PROC = 1  # map workers
 TRAIN_SPLIT = 0.8                 # 80% for training
 VAL_SPLIT = 0.1                   # 10% for validation
 TEST_SPLIT = 0.1                  # 10% for testing
@@ -54,7 +55,7 @@ LOGGING_STEPS = 1                 # How often to log
 REPORT_TO = "none"               # "none", "wandb", "tensorboard"
 
 # Advanced Settings
-USE_GRADIENT_CHECKPOINTING = False # Save memory at cost of speed
+USE_GRADIENT_CHECKPOINTING = True # Save memory at cost of speed
 PACKING = False                          # Pack multiple samples (faster for short sequences)
 
 # Inference Configuration

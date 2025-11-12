@@ -12,6 +12,8 @@ generated_data
 /lottie_model*
 /outputs
 
+/flash-attention
+
 *.out
 
 **/*.json*

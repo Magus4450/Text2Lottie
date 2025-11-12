@@ -5,12 +5,14 @@ from datasets import load_dataset, DatasetDict
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
+    BitsAndBytesConfig,
     TrainingArguments,
     Trainer,
     DataCollatorForLanguageModeling,
 )
 from src.model.semantic_tokenizer import LottieSemanticTokenizer, to_semantic
 import src.model.config as config
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 if torch.cuda.is_available():
     for i in range(torch.cuda.device_count()):
@@ -23,13 +25,26 @@ else:
 # -----------------------------
 # Load base model and tokenizer
 # -----------------------------
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,                 # << 4-bit weights
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16,
+)
+
 print("Loading base model and tokenizer...")
-tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
+tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME, use_fast=True)
+
 model = AutoModelForCausalLM.from_pretrained(
     config.MODEL_NAME,
-    # torch_dtype=config.DTYPE,
-    device_map="auto",
+    quantization_config=bnb_config,    # << use 4-bit
+    device_map="auto",                 # << let Accelerate place it
+    # attn_implementation="flash_attention_2" if torch.cuda.is_available() else None,  # optional
+    dtype=torch.float16,         # compute dtype
 )
+model.config.use_cache = False         # << required with grad checkpointing
+
 print(model.dtype, next(model.parameters()).device)
 
 # -----------------------------
@@ -38,24 +53,39 @@ print(model.dtype, next(model.parameters()).device)
 print("Augmenting tokenizer with Lottie semantic tags/patterns...")
 _ = LottieSemanticTokenizer(tokenizer, add_as_special_tokens=False)
 
-old_vocab = model.get_input_embeddings().weight.size(0)
-new_vocab = len(tokenizer)
-print(f"Resizing embeddings: {old_vocab} → {new_vocab}")
-model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
-
 # -----------------------------
 # Ensure tokenizer has a pad token
 # -----------------------------
 if tokenizer.pad_token is None:
     print("Tokenizer has no pad_token; adding <pad> token.")
     tokenizer.add_special_tokens({'pad_token': '<pad>'})
-    model.resize_token_embeddings(len(tokenizer))
+
+old_vocab = model.get_input_embeddings().weight.size(0)
+new_vocab = len(tokenizer)
+print(f"Resizing embeddings: {old_vocab} → {new_vocab}")
+if new_vocab != old_vocab:
+    model.resize_token_embeddings(new_vocab, mean_resizing=False)
+model.config.pad_token_id = tokenizer.pad_token_id
+
+model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+lora_cfg = LoraConfig(
+    r=getattr(config, "LORA_R", 16),
+    lora_alpha=getattr(config, "LORA_ALPHA", 16),
+    lora_dropout=getattr(config, "LORA_DROPOUT", 0.0),
+    target_modules=getattr(config, "TARGET_MODULES", [
+        "q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"
+    ]),
+    bias="none",
+    task_type="CAUSAL_LM",
+)
+model = get_peft_model(model, lora_cfg)
+model.print_trainable_parameters()   # sanity check
 
 # Ensure embeddings are trainable
-model.get_input_embeddings().requires_grad_(True)
-model.get_output_embeddings().requires_grad_(True)
+# model.get_input_embeddings().requires_grad_(True)
+# model.get_output_embeddings().requires_grad_(True)
 
-model.gradient_checkpointing_enable()
+# model.gradient_checkpointing_enable()
 
 # -----------------------------
 # Load train/val/test datasets
@@ -144,10 +174,10 @@ collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 print("Setting up training...")
 training_args = TrainingArguments(
     output_dir=config.OUTPUT_DIR,
-    per_device_train_batch_size=config.BATCH_SIZE,
+    per_device_train_batch_size=config.BATCH_SIZE,          # 1
     per_device_eval_batch_size=config.BATCH_SIZE,
-    gradient_accumulation_steps=config.GRADIENT_ACCUMULATION_STEPS,
-    learning_rate=config.LEARNING_RATE,
+    gradient_accumulation_steps=config.GRADIENT_ACCUMULATION_STEPS,  # 2
+    learning_rate=config.LEARNING_RATE,                     # 2e-4 ok for LoRA
     warmup_steps=config.WARMUP_STEPS,
     num_train_epochs=config.NUM_EPOCHS,
     weight_decay=config.WEIGHT_DECAY,
@@ -157,12 +187,12 @@ training_args = TrainingArguments(
     eval_strategy=config.EVAL_STRATEGY,
     load_best_model_at_end=config.LOAD_BEST_MODEL,
     lr_scheduler_type=config.LR_SCHEDULER,
-    optim=config.OPTIMIZER,
-    fp16=True,
-    bf16=False,
+    optim="adamw_bnb_8bit",                                 # << memory-light
+    fp16=True, bf16=False,
     seed=config.SHUFFLE_SEED,
     report_to=config.REPORT_TO,
-    gradient_checkpointing=getattr(config, "USE_GRADIENT_CHECKPOINTING", False),
+    gradient_checkpointing=True,                            # << enable GC
+    max_grad_norm=0.3,                                      # << helps stability
 )
 
 # -----------------------------

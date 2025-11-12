@@ -2,7 +2,7 @@
 #SBATCH --job-name=finetune_llama_3
 #SBATCH --output=finetune_llama_3_%j.out
 #SBATCH --gres=gpu:1
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --mem=32G
 
 
