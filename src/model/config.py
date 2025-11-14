@@ -1,7 +1,7 @@
 
 # Model Configuration
 MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct" 
-NICKNAME = "llama_32_3B"
+NICKNAME = "llama_32_3B_V_FIX"
 
 MAX_SEQ_LENGTH = 2048  # Maximum sequence length (reduce if OOM)
 LOAD_IN_4BIT = False    # Use 4-bit quantization (recommended)
@@ -20,7 +20,7 @@ TARGET_MODULES = [     # Which layers to apply LoRA to
 # Training Configuration
 BATCH_SIZE = 4                    # Per device batch size
 GRADIENT_ACCUMULATION_STEPS = 4   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
-NUM_EPOCHS = 5                    # Number of training epochs
+NUM_EPOCHS = 2                    # Number of training epochs
 LEARNING_RATE = 2e-4              # Learning rate
 WARMUP_STEPS = 5                  # Number of warmup steps
 WARMUP_RATIO = 0.03

@@ -57,7 +57,7 @@ model.eval()
 # -----------------------------
 # Generation function
 # -----------------------------
-def generate_response(prompt: str, max_new_tokens: int = 512, temperature: float = 0.7):
+def generate_response(prompt: str, max_new_tokens: int = config.MAX_SEQ_LENGTH, temperature: float = 0.7):
     """
     Generate Lottie JSON or natural-language response from prompt.
     """

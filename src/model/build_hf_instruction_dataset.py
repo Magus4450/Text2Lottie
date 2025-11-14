@@ -69,7 +69,7 @@ def read_text_files(folder: Path) -> Dict[str, str]:
 
 
 def read_json_files_as_string(folder: Path) -> Dict[str, str]:
-    UNNECESSARY_KEYS = {"mn", "ddd", "sr", "cl", "ln", "bm", "hd"}
+    UNNECESSARY_KEYS = set()
 
     def _clean(obj):
         if isinstance(obj, dict):

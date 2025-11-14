@@ -475,7 +475,7 @@ def main():
     os.makedirs(anim_dir, exist_ok=True)
     
     # Number of total samples
-    N_SAMPLES = 10
+    N_SAMPLES = 100
     
     colors = VISIBLE_COLORS
     translation_dirs = ["right", "left"]
