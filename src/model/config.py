@@ -31,7 +31,7 @@ LR_SCHEDULER = "linear"           # Learning rate scheduler
 # Data Configuration
 DATASET_JSONL = "instruction_dataset.jsonl"
 DATASET_TRAIN = "train.jsonl"
-DATASET_TEST = "test.jsonl"
+DATASET_TEST = "test_dup.jsonl"
 DATASET_VAL = "val.jsonl"
 DATASET_NUM_PROC = 24  # map workers
 TRAIN_SPLIT = 0.9                 # 80% for training

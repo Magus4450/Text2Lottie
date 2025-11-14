@@ -8,7 +8,7 @@
 
 # Activate your environment
 source /apps/local/anaconda3/conda_init.sh
-conda activate llm
+conda activate finetuen
 
 # Run your script
-python -m src.model.inferenec_batch --split test --model_name blahblahblah --savefolder infered --batch_size 8
+python -m src.model.inference
