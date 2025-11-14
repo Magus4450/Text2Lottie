@@ -15,7 +15,7 @@ import src.model.config as config
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 import wandb
-wandb.init(project="lottie-llama3-finetune")
+wandb.init(project=config.NICKNAME)
 
 if torch.cuda.is_available():
     for i in range(torch.cuda.device_count()):

@@ -11,10 +11,12 @@ generated_data
 
 /lottie_model*
 /outputs
+/dataset_new
 
 /flash-attention
 
 /wandb
+/finetune_output
 *.out
 
 **/*.json*

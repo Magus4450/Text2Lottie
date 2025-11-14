@@ -1,6 +1,7 @@
 
 # Model Configuration
-MODEL_NAME = "meta-llama/Llama-3.2-1B-Instruct" 
+MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct" 
+NICKNAME = "llama_32_3B"
 
 MAX_SEQ_LENGTH = 2048  # Maximum sequence length (reduce if OOM)
 LOAD_IN_4BIT = False    # Use 4-bit quantization (recommended)
@@ -17,7 +18,7 @@ TARGET_MODULES = [     # Which layers to apply LoRA to
 ]
 
 # Training Configuration
-BATCH_SIZE = 2                    # Per device batch size
+BATCH_SIZE = 4                    # Per device batch size
 GRADIENT_ACCUMULATION_STEPS = 4   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
 NUM_EPOCHS = 5                    # Number of training epochs
 LEARNING_RATE = 2e-4              # Learning rate
@@ -42,8 +43,8 @@ SHUFFLE_SEED = 3407               # Random seed for shuffling
 
 # Output Configuration
 OUTPUT_DIR = "outputs"                      # Training checkpoints directory
-MODEL_OUTPUT_DIR = "lottie_model_llama_8B"          # Final model directory
-LORA_OUTPUT_DIR = "lottie_model_lora"      # LoRA adapters only directory
+MODEL_OUTPUT_DIR = f"lottie_model_{NICKNAME}"          # Final model directory
+LORA_OUTPUT_DIR = f"lottie_model_lora_{NICKNAME}"      # LoRA adapters only directory
 SAVE_STRATEGY = "steps"                     # When to save checkpoints
 SAVE_TOTAL_LIMIT = 2                        # Maximum number of checkpoints to keep
 

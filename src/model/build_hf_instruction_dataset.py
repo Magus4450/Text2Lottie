@@ -1,58 +1,63 @@
 #!/usr/bin/env python3
 """
-Build an instruction-finetuning dataset (JSONL) from a Lottie dataset folder structure.
+GLOBAL STRATIFIED DATASET BUILDER FOR LOTTIE INSTRUCTION FINETUNING
 
-Assumptions
------------
-datasets/
-  <dataset_name>/
-    animation_caption/*.txt        # normal captions
-    json/*.json                    # normal lottie JSONs
-    static_caption/*.txt           # (optional) static captions
-    static_json/*.json             # (optional) static lottie JSONs
-
-Pairing is done by matching the *stem* (filename without extension).
-Only pairs that exist on both sides are used to create supervised examples.
-
-For datasets listed in WITH_STATIC, we create:
-  - static forward (caption -> json) and static reverse (json -> caption)
-  - normal forward (caption -> json) and normal reverse (json -> caption)
-  - **NEW** static+description augment: given a static JSON and a (normal) description,
-    produce an animated JSON. Requires a triple match on the same stem:
-    static_json[k] + animation_caption[k] -> json[k]
-
-For all others:
-  - normal forward and normal reverse only
-
-Output
+Rules:
 ------
-- instruction_dataset.jsonl : one example per line in chat format
-- stats.json                 : counts per dataset/category/direction
+1) Train contains:
+   - normal_fwd (minus those used by val/test)
+   - normal_rev
+   - static_fwd
+   - static_rev
+   - static_augment
+
+2) Val + Test contain ONLY:
+   - normal_fwd
+
+3) Stratification:
+   - Only normal_fwd is used for splitting
+   - Val & test maintain proportional distribution across dataset folders
+
+4) Train/val/test JSONLs are generated separately.
 """
 
 import os
 import json
 import random
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# -------------------------------------------------------------
 # CONFIG
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-ROOT_DIR = "raw_datasets"
-OUTPUT_JSONL = "instruction_dataset.jsonl"
-STATS_JSON = "stats.json"
+# -------------------------------------------------------------
+ROOT_DIR = "dataset_new"
+WITH_STATIC = {"generated_data"}  # dataset folders that have static_json & static_caption
 
-# Datasets in this list are treated as having "static" subfolders.
-WITH_STATIC = {"generated_data"}  # update as needed
+random.seed(42)
 
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# UTILITIES
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+# -------------------------------------------------------------
+# DATA STRUCTURES
+# -------------------------------------------------------------
+@dataclass
+class Example:
+    id: str
+    messages: List[Dict[str, str]]
+    metadata: Dict[str, str]
+
+
+def mk_messages(up: str, ans: str):
+    return [
+        {"role": "user", "content": up},
+        {"role": "assistant", "content": ans},
+    ]
+
+
+# -------------------------------------------------------------
+# FILE READERS
+# -------------------------------------------------------------
 def read_text_files(folder: Path) -> Dict[str, str]:
-    """Return {stem: content} for all .txt in folder. Missing folder -> {}."""
     data = {}
     if folder.exists():
         for p in folder.glob("*.txt"):
@@ -64,22 +69,13 @@ def read_text_files(folder: Path) -> Dict[str, str]:
 
 
 def read_json_files_as_string(folder: Path) -> Dict[str, str]:
-    """
-    Return {stem: cleaned_json_string} for all .json in folder.
-    Removes unnecessary Lottie keys that don't affect animation.
-    Missing folder -> {}.
-    """
-    UNNECESSARY_KEYS = {"nm", "mn", "v", "ddd", "sr", "cl", "ln", "bm", "hd"}
+    UNNECESSARY_KEYS = {"mn", "ddd", "sr", "cl", "ln", "bm", "hd"}
 
     def _clean(obj):
         if isinstance(obj, dict):
-            return {
-                k: _clean(v)
-                for k, v in obj.items()
-                if k not in UNNECESSARY_KEYS
-            }
+            return {k: _clean(v) for k, v in obj.items() if k not in UNNECESSARY_KEYS}
         elif isinstance(obj, list):
-            return [_clean(item) for item in obj]
+            return [_clean(x) for x in obj]
         else:
             return obj
 
@@ -87,228 +83,195 @@ def read_json_files_as_string(folder: Path) -> Dict[str, str]:
     if folder.exists():
         for p in folder.glob("*.json"):
             try:
-                s = p.read_text(encoding="utf-8").strip()
-                obj = json.loads(s)
-
-                # Clean the Lottie JSON recursively
+                obj = json.loads(p.read_text().strip())
                 cleaned = _clean(obj)
-
-                # Serialize back to compact string (no spaces at all)
-                json_str = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"), sort_keys=False)
-                json_str = "".join(json_str.split())  # remove all whitespace characters
-
-                data[p.stem] = json_str
+                s = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"))
+                s = "".join(s.split())  # remove all whitespace
+                data[p.stem] = s
             except Exception as e:
-                print(f"[WARN] Failed to read/parse JSON {p}: {e}")
-
+                print(f"[WARN] Failed JSON {p}: {e}")
     return data
 
-def mk_messages(user_prompt: str, assistant_answer: str) -> List[Dict[str, str]]:
-    """Create a chat-format example (system optional; keep simple & universal)."""
-    return [
-        {"role": "user", "content": user_prompt.strip()},
-        {"role": "assistant", "content": assistant_answer.strip()},
-    ]
 
-
-@dataclass
-class Example:
-    id: str
-    messages: List[Dict[str, str]]
-    metadata: Dict[str, str]
-
-
-@dataclass
-class Counter:
-    static_fwd: int = 0
-    static_rev: int = 0
-    static_aug_anim: int = 0  # NEW: static JSON + description -> animated JSON
-    normal_fwd: int = 0
-    normal_rev: int = 0
-
-
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# BUILDERS
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-def build_forward_prompt(caption: str, static: bool) -> str:
+# -------------------------------------------------------------
+# PROMPT BUILDERS
+# -------------------------------------------------------------
+def build_forward_prompt(caption: str, static: bool):
     if static:
         return f"Generate a static lottie JSON animation given the following description:\n{caption}"
     return f"Generate a lottie JSON animation given the following description:\n{caption}"
 
 
-def build_reverse_prompt(json_str: str, static: bool) -> str:
+def build_reverse_prompt(json_str: str, static: bool):
     if static:
-        return "What does the following static lottie JSON animation represent?\n\n```json\n" + json_str + "\n```"
-    return "What does the following lottie JSON animation represent?\n\n```json\n" + json_str + "\n```"
-
-
-def build_static_augment_prompt(static_json: str, animated_caption: str) -> str:
+        return (
+            f"What does the following static lottie JSON animation represent?\n\n"
+            f"```json\n{json_str}\n```"
+        )
     return (
-        "Given a static lottie JSON animation, add animation with the given description.\n\n"
-        "Static:\n```json\n" + static_json + "\n```\n\n"
-        "Description:\n" + animated_caption
+        f"What does the following lottie JSON animation represent?\n\n"
+        f"```json\n{json_str}\n```"
     )
 
 
-def make_pairs(captions: Dict[str, str], jsons: Dict[str, str]) -> List[Tuple[str, str, str]]:
-    """
-    Return list of (key, caption, json) only where both sides exist.
-    """
-    keys = sorted(set(captions.keys()) & set(jsons.keys()))
-    return [(k, captions[k], jsons[k]) for k in keys]
+def build_static_augment_prompt(static_json: str, desc: str):
+    return (
+        "Given a static lottie JSON animation, add animation with the given description.\n\n"
+        f"Static:\n```json\n{static_json}\n```\n\nDescription:\n{desc}"
+    )
 
 
-def build_examples_for_dataset(ds_name: str, ds_path: Path, with_static: bool) -> Tuple[List[Example], Counter]:
-    out: List[Example] = []
-    ctr = Counter()
+# -------------------------------------------------------------
+# PROCESS A SINGLE DATASET FOLDER
+# -------------------------------------------------------------
+def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
+    out = {
+        "normal_fwd": [],
+        "normal_rev": [],
+        "static_fwd": [],
+        "static_rev": [],
+        "static_augment": [],
+    }
 
-    # normal
+    # load all required components
     anim_caps = read_text_files(ds_path / "animation_caption")
     anim_json = read_json_files_as_string(ds_path / "json")
-    normal_pairs = make_pairs(anim_caps, anim_json)
+    normal_keys = sorted(set(anim_caps) & set(anim_json))
 
-    # forward (caption -> json)
-    for k, cap, jstr in normal_pairs:
-        ex_id = f"{ds_name}::normal::fwd::{k}"
-        user_prompt = build_forward_prompt(cap, static=False)
-        messages = mk_messages(user_prompt, jstr)
-        out.append(Example(
-            id=ex_id,
-            messages=messages,
-            metadata={"dataset": ds_name, "category": "normal", "direction": "forward", "key": k}
+    st_caps = read_text_files(ds_path / "static_caption") if with_static else {}
+    st_json = read_json_files_as_string(ds_path / "static_json") if with_static else {}
+    static_keys = sorted(set(st_caps) & set(st_json))
+
+    triple_keys = (
+        sorted(set(st_json) & set(anim_caps) & set(anim_json))
+        if with_static else []
+    )
+
+    # ---- normal ----
+    for k in normal_keys:
+        out["normal_fwd"].append(Example(
+            id=f"{ds_name}::normal::fwd::{k}",
+            messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
+            metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
         ))
-        ctr.normal_fwd += 1
-
-    # reverse (json -> caption)
-    for k, cap, jstr in normal_pairs:
-        ex_id = f"{ds_name}::normal::rev::{k}"
-        user_prompt = build_reverse_prompt(jstr, static=False)
-        messages = mk_messages(user_prompt, cap)
-        out.append(Example(
-            id=ex_id,
-            messages=messages,
-            metadata={"dataset": ds_name, "category": "normal", "direction": "reverse", "key": k}
+        out["normal_rev"].append(Example(
+            id=f"{ds_name}::normal::rev::{k}",
+            messages=mk_messages(build_reverse_prompt(anim_json[k], False), anim_caps[k]),
+            metadata={"dataset": ds_name, "type": "normal_rev", "key": k}
         ))
-        ctr.normal_rev += 1
 
-    # static optional
+    # ---- static ----
     if with_static:
-        st_caps = read_text_files(ds_path / "static_caption")
-        st_json = read_json_files_as_string(ds_path / "static_json")
-        static_pairs = make_pairs(st_caps, st_json)
-
-        # forward (caption -> json)
-        for k, cap, jstr in static_pairs:
-            ex_id = f"{ds_name}::static::fwd::{k}"
-            user_prompt = build_forward_prompt(cap, static=True)
-            messages = mk_messages(user_prompt, jstr)
-            out.append(Example(
-                id=ex_id,
-                messages=messages,
-                metadata={"dataset": ds_name, "category": "static", "direction": "forward", "key": k}
+        for k in static_keys:
+            out["static_fwd"].append(Example(
+                id=f"{ds_name}::static::fwd::{k}",
+                messages=mk_messages(build_forward_prompt(st_caps[k], True), st_json[k]),
+                metadata={"dataset": ds_name, "type": "static_fwd", "key": k}
             ))
-            ctr.static_fwd += 1
-
-        # reverse (json -> caption)
-        for k, cap, jstr in static_pairs:
-            ex_id = f"{ds_name}::static::rev::{k}"
-            user_prompt = build_reverse_prompt(jstr, static=True)
-            messages = mk_messages(user_prompt, cap)
-            out.append(Example(
-                id=ex_id,
-                messages=messages,
-                metadata={"dataset": ds_name, "category": "static", "direction": "reverse", "key": k}
+            out["static_rev"].append(Example(
+                id=f"{ds_name}::static::rev::{k}",
+                messages=mk_messages(build_reverse_prompt(st_json[k], True), st_caps[k]),
+                metadata={"dataset": ds_name, "type": "static_rev", "key": k}
             ))
-            ctr.static_rev += 1
 
-        # NEW: static augment — given static JSON + (normal) description -> animated JSON
-        # Requires triple match across: static_json, animation_caption, animated json
-        triple_keys = sorted(set(st_json.keys()) & set(anim_caps.keys()) & set(anim_json.keys()))
         for k in triple_keys:
-            ex_id = f"{ds_name}::static::augment_anim::{k}"
-            user_prompt = build_static_augment_prompt(st_json[k], anim_caps[k])
-            messages = mk_messages(user_prompt, anim_json[k])
-            out.append(Example(
-                id=ex_id,
-                messages=messages,
-                metadata={
-                    "dataset": ds_name,
-                    "category": "static",
-                    "direction": "augment_anim",
-                    "key": k
-                }
+            out["static_augment"].append(Example(
+                id=f"{ds_name}::static::augment::{k}",
+                messages=mk_messages(
+                    build_static_augment_prompt(st_json[k], anim_caps[k]),
+                    anim_json[k]
+                ),
+                metadata={"dataset": ds_name, "type": "static_augment", "key": k}
             ))
-            ctr.static_aug_anim += 1
 
-    return out, ctr
+    for k, v in out.items():
+        print(k, len(v))
+    return out
 
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# -------------------------------------------------------------
+# GLOBAL STRATIFIED SPLIT FOR NORMAL_FWD ONLY
+# -------------------------------------------------------------
+def split_normal_fwd(dataset_examples, train_ratio=0.9, val_ratio=0.05):
+    train, val, test = [], [], []
+
+    for ds, parts in dataset_examples.items():
+        nfwd = parts["normal_fwd"]
+        n = len(nfwd)
+        if n == 0:
+            continue
+
+        random.shuffle(nfwd)
+
+        n_train = int(n * train_ratio)
+        n_val = int(n * val_ratio)
+
+        train.extend(nfwd[:n_train])
+        val.extend(nfwd[n_train:n_train + n_val])
+        test.extend(nfwd[n_train + n_val:])
+
+    return train, val, test
+
+
+# -------------------------------------------------------------
+# WRITE JSONL
+# -------------------------------------------------------------
+def write_jsonl(path, examples):
+    with open(path, "w", encoding="utf-8") as f:
+        for ex in examples:
+            f.write(json.dumps({
+                "id": ex.id,
+                "messages": ex.messages,
+                "metadata": ex.metadata
+            }, ensure_ascii=False) + "\n")
+    print(f"[OK] Wrote {len(examples)} → {path}")
+
+
+# -------------------------------------------------------------
 # MAIN
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+# -------------------------------------------------------------
 def main():
     root = Path(ROOT_DIR)
     assert root.exists(), f"Root folder not found: {ROOT_DIR}"
 
-    all_ds_dirs = [p for p in root.iterdir() if p.is_dir()]
-    totals = {}
-    all_examples: List[Example] = []
-
-    for ds_path in sorted(all_ds_dirs):
+    # Load all dataset folders
+    dataset_examples = {}
+    for ds_path in sorted(p for p in root.iterdir() if p.is_dir()):
         ds_name = ds_path.name
-        print(f"[INFO] Processing: {ds_name}")
-        exs, ctr = build_examples_for_dataset(ds_name, ds_path, ds_name in WITH_STATIC)
-        all_examples.extend(exs)
-        totals[ds_name] = asdict(ctr)
-        print(f"       normal_fwd={ctr.normal_fwd} normal_rev={ctr.normal_rev} "
-              f"static_fwd={ctr.static_fwd} static_rev={ctr.static_rev} static_aug_anim={ctr.static_aug_anim}")
+        print(f"[INFO] Processing {ds_name}")
+        dataset_examples[ds_name] = process_dataset(ds_name, ds_path, ds_name in WITH_STATIC)
 
-    print(f"[INFO] Total examples collected: {len(all_examples)}")
+    # ---------- STRATIFIED SPLIT: ONLY NORMAL_FWD ----------
+    nfwd_train, val, test = split_normal_fwd(dataset_examples)
 
-    # --------------------------
-    # Shuffle and split
-    # --------------------------
-    random.seed(42)
-    random.shuffle(all_examples)
+    for ex in val: ex.metadata["split"] = "val"
+    for ex in test: ex.metadata["split"] = "test"
 
-    n = len(all_examples)
-    n_train = int(n * 0.9)
-    n_val = int(n * 0.05)
-    n_test = n - n_train - n_val
+    # ---------- BUILD TRAIN ----------
+    train = []
 
-    train_set = all_examples[:n_train]
-    val_set = all_examples[n_train:n_train + n_val]
-    test_set = all_examples[n_train + n_val:]
+    # include normal_fwd parts destined for train
+    nfwd_train_ids = {e.id for e in nfwd_train}
 
-    def write_jsonl(filename: str, data: List[Example]):
-        with open(filename, "w", encoding="utf-8") as f:
-            for ex in data:
-                f.write(json.dumps({
-                    "id": ex.id,
-                    "messages": ex.messages,
-                    "metadata": ex.metadata
-                }, ensure_ascii=False) + "\n")
-        print(f"[OK] Wrote {len(data)} examples -> {filename}")
+    for ds, parts in dataset_examples.items():
+        # normal_fwd: keep only those not in val/test
+        for ex in parts["normal_fwd"]:
+            if ex.id in nfwd_train_ids:
+                ex.metadata["split"] = "train"
+                train.append(ex)
 
-    # --------------------------
-    # Write splits
-    # --------------------------
-    write_jsonl("train.jsonl", train_set)
-    write_jsonl("val.jsonl", val_set)
-    write_jsonl("test.jsonl", test_set)
+        # add all other training-only types
+        for typ in ["normal_rev", "static_fwd", "static_rev", "static_augment"]:
+            for ex in parts[typ]:
+                ex.metadata["split"] = "train"
+                train.append(ex)
 
-    # Write stats
-    with open(STATS_JSON, "w", encoding="utf-8") as f:
-        json.dump({
-            "totals": totals,
-            "split_counts": {
-                "train": len(train_set),
-                "val": len(val_set),
-                "test": len(test_set)
-            }
-        }, f, ensure_ascii=False, indent=2)
-    print(f"[OK] Wrote stats -> {STATS_JSON}")
+    # ---------- WRITE FILES ----------
+    write_jsonl("train.jsonl", train)
+    write_jsonl("val.jsonl", val)
+    write_jsonl("test.jsonl", test)
 
+    print("[DONE]")
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ import copy
 # =========================
 RANDOM_SEED = 42
 random.seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
 
 # ---- 20 visible colors on white ----
 VISIBLE_COLORS = [
@@ -58,18 +59,40 @@ def make_spinner(
     rotation_speed=1.0,
     duration=2.0,
     out_dir="spinners",
-    direction="clockwise"  # <-- new parameter
+    direction="clockwise",
+    add_noise=True  # <-- new parameter
 ):
     """
     Generate a visible, smooth Lottie spinner animation
     with a configurable number of entities and rotation direction.
+    Now includes variability/noise across multiple parameters.
     """
-    ring_radius_copy = ring_radius.copy()
-    entity_radius_copy = entity_radius.copy()
-
-    # Add noise to the ring the parameters
-    ring_radius += np.random.normal(0, 1)
-    entity_count += np.random.normal(0, 1)
+    # Store original values for filename
+    ring_radius_orig = ring_radius
+    entity_radius_orig = entity_radius
+    entity_count_orig = entity_count
+    size_orig = size
+    
+    if add_noise:
+        # Canvas size variability (±5%)
+        size = int(size * random.uniform(0.95, 1.05))
+        
+        # Ring radius variability (±8%)
+        ring_radius = ring_radius * random.uniform(0.92, 1.08)
+        
+        # Entity radius variability (±10%)
+        entity_radius = entity_radius * random.uniform(0.90, 1.10)
+        
+        # Entity count stays the same (already an integer)
+        # but we can add slight positioning noise later
+        
+        # Rotation speed variability (±5%)
+        rotation_speed = rotation_speed * random.uniform(0.95, 1.05)
+        
+        # Frame rate variability
+        fr = random.randint(25, 35)
+    else:
+        fr = 30
 
     if not (5 <= entity_count <= 15):
         raise ValueError("entity_count must be between 5 and 15")
@@ -78,34 +101,80 @@ def make_spinner(
         raise ValueError("direction must be 'clockwise' or 'anticlockwise'")
 
     os.makedirs(out_dir, exist_ok=True)
-    fr = 30
     total_frames = int(fr * duration)
     angle_step = 360 / entity_count
 
     # Flip direction of placement
     direction_sign = 1 if direction == "clockwise" else -1
 
-    color_rgba = [
-        int(color[1:3], 16) / 255,
-        int(color[3:5], 16) / 255,
-        int(color[5:7], 16) / 255,
-        1
-    ]
+    # Color with variability
+    def hex_to_rgba01(hexstr):
+        s = hexstr.strip().lstrip("#")
+        if len(s) == 3:
+            s = "".join(ch * 2 for ch in s)
+        r = int(s[0:2], 16) / 255.0
+        g = int(s[2:4], 16) / 255.0
+        b = int(s[4:6], 16) / 255.0
+        return [r, g, b, 1]
+    
+    color_rgba = hex_to_rgba01(color)
+    
+    if add_noise:
+        # Add slight color jitter (±0.08 in RGB space, clamped)
+        color_rgba = [
+            max(0, min(1, color_rgba[0] + random.uniform(-0.08, 0.08))),
+            max(0, min(1, color_rgba[1] + random.uniform(-0.08, 0.08))),
+            max(0, min(1, color_rgba[2] + random.uniform(-0.08, 0.08))),
+            1
+        ]
 
     dot_groups = []
     for i in range(entity_count):
-        angle_deg = direction_sign * i * angle_step  # <-- direction applied here
+        angle_deg = direction_sign * i * angle_step
+        
+        # Add angular noise (±2 degrees)
+        if add_noise:
+            angle_deg += random.uniform(-2, 2)
+        
         rad = math.radians(angle_deg)
-        x = ring_radius * math.cos(rad) 
-        y = ring_radius * math.sin(rad)
+        
+        # Calculate position with optional radial noise
+        current_ring_radius = ring_radius
+        if add_noise:
+            # Add radial position noise (±3%)
+            current_ring_radius *= random.uniform(0.97, 1.03)
+        
+        x = current_ring_radius * math.cos(rad)
+        y = current_ring_radius * math.sin(rad)
 
+        # Calculate opacity animation offset
         offset = int((i / entity_count) * total_frames)
+        
+        # Opacity range with variability
+        min_opacity = 30
+        max_opacity = 100
+        if add_noise:
+            min_opacity = max(10, min_opacity + random.uniform(-10, 10))
+            max_opacity = min(100, max_opacity + random.uniform(-5, 5))
+        
+        # Opacity timing with slight variability
+        quarter_frame = total_frames / 4
+        half_frame = total_frames / 2
+        if add_noise:
+            quarter_frame *= random.uniform(0.95, 1.05)
+            half_frame *= random.uniform(0.95, 1.05)
+        
         k_opacity = [
-            {"t": offset % total_frames, "s": [30], "i": {"x": [0.667], "y": [1]}, "o": {"x": [0.333], "y": [0]}},
-            {"t": (offset + total_frames / 4) % total_frames, "s": [100], "i": {"x": [0.667], "y": [1]}, "o": {"x": [0.333], "y": [0]}},
-            {"t": (offset + total_frames / 2) % total_frames, "s": [30], "i": {"x": [0.667], "y": [1]}, "o": {"x": [0.333], "y": [0]}},
-            {"t": total_frames, "s": [30]}
+            {"t": offset % total_frames, "s": [min_opacity], "i": {"x": [0.667], "y": [1]}, "o": {"x": [0.333], "y": [0]}},
+            {"t": int((offset + quarter_frame) % total_frames), "s": [max_opacity], "i": {"x": [0.667], "y": [1]}, "o": {"x": [0.333], "y": [0]}},
+            {"t": int((offset + half_frame) % total_frames), "s": [min_opacity], "i": {"x": [0.667], "y": [1]}, "o": {"x": [0.333], "y": [0]}},
+            {"t": total_frames, "s": [min_opacity]}
         ]
+
+        # Entity size with individual variability
+        current_entity_radius = entity_radius
+        if add_noise:
+            current_entity_radius *= random.uniform(0.90, 1.10)
 
         dot_groups.append({
             "ty": "gr",
@@ -113,7 +182,7 @@ def make_spinner(
                 {
                     "ty": "el",
                     "p": {"a": 0, "k": [x, y]},
-                    "s": {"a": 0, "k": [entity_radius * 2, entity_radius * 2]},
+                    "s": {"a": 0, "k": [current_entity_radius * 2, current_entity_radius * 2]},
                     "nm": f"Ellipse_{i}"
                 },
                 {
@@ -135,6 +204,11 @@ def make_spinner(
             "nm": f"DotGroup_{i}"
         })
 
+    # Final rotation angle with variability
+    final_rotation = 360 * rotation_speed * direction_sign
+    if add_noise:
+        final_rotation += random.uniform(-5, 5)
+
     spinner_layer = {
         "ddd": 0,
         "ind": 1,
@@ -154,7 +228,7 @@ def make_spinner(
                     },
                     {
                         "t": total_frames,
-                        "s": [360 * rotation_speed * direction_sign],  # <-- rotation matches direction
+                        "s": [final_rotation],
                         "i": {"x": [0.667], "y": [1]},
                         "o": {"x": [0.333], "y": [0]}
                     }
@@ -181,15 +255,16 @@ def make_spinner(
         "layers": [spinner_layer]
     }
 
+    # Use original values for filename for consistency
     fname = (
         f"spinner_color-{color.strip('#')}_"
-        f"entities-{entity_count}_r-{ring_radius_copy}_speed-{rotation_speed}_dir-{direction}.json"
+        f"entities-{entity_count_orig}_r-{ring_radius_orig}_speed-{rotation_speed}_dir-{direction}.json"
     )
     path = os.path.join(out_dir, fname)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(lottie, f, ensure_ascii=False, separators=(",", ":"))
 
-    print(f"✅ Spinner ({entity_count} dots, {direction}) saved → {path}")
+    print(f"✅ Spinner ({entity_count_orig} dots, {direction}) saved → {path}")
     return fname
 
 
@@ -227,8 +302,9 @@ def describe_speed(speed: float) -> str:
     if abs_speed < 1.1: return "steady"
     return "fast"
 
-def describe_direction(speed: float) -> str:
-    return "clockwise" if speed >= 0 else "counterclockwise"
+def describe_direction(direction: str) -> str:
+    return direction
+
 
 def extract_params(base_name: str):
     m = re.search(
@@ -251,7 +327,7 @@ def generate_captions(base_name: str, static_dir: str, anim_dir: str):
     color_word = color_name_from_hex(color_hex)
     entity_word = str(entity_count)
     radius_word = str(radius)
-    direction_word = direction
+    direction_word = describe_direction(direction)
     speed_word = describe_speed(speed)
     canvas_word = "512x512"
 
@@ -280,7 +356,7 @@ def generate_captions(base_name: str, static_dir: str, anim_dir: str):
 # MAIN DRIVER
 # =========================
 def main():
-    parser = argparse.ArgumentParser(description="Generate Lottie spinners with color-name captions.")
+    parser = argparse.ArgumentParser(description="Generate Lottie spinners with color-name captions and variability.")
     parser.add_argument("--outdir", type=str, required=True)
     args = parser.parse_args()
 
@@ -292,7 +368,7 @@ def main():
     os.makedirs(anim_dir, exist_ok=True)
 
     # number of total samples you want
-    N_SAMPLES = 50  # change as desired
+    N_SAMPLES = 100  # change as desired
 
     colors = VISIBLE_COLORS
     entity_counts = [8, 10, 15]
@@ -321,12 +397,14 @@ def main():
             duration=duration,
             direction=direction,
             out_dir=json_dir,
+            add_noise=True  # <-- enable variability
         )
 
         generate_captions(base_name, static_dir, anim_dir)
 
-    print(f"✅ Generated spinner JSONs and readable captions in '{args.outdir}'")
+    print(f"✅ Generated {len(sampled_combos)} spinner JSONs with variability and readable captions in '{args.outdir}'")
     print(f"🎲 Random seed: {RANDOM_SEED}")
+    print(f"🎨 Variability added to: canvas size, ring radius, entity radius, positions, colors, rotation speed, opacity, and timing")
 
 if __name__ == "__main__":
     main()

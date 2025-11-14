@@ -399,7 +399,7 @@ def main():
     os.makedirs(anim_dir, exist_ok=True)
     
     # Number of total samples
-    N_SAMPLES = 50
+    N_SAMPLES = 10
     
     colors = VISIBLE_COLORS
     square_sizes = [100, 120, 150, 180, 200, 220, 250]
