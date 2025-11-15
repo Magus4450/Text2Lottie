@@ -432,14 +432,194 @@ color_names = list(COLOR_PALETTE.keys())
 
 duration_seconds = 2.0
 
-OUT_DIR = "generated_data"
+OUT_DIR = "dataset_variations/generated_data"
 JSON_DIR = os.path.join(OUT_DIR, "json")
 CAPTION_DIR = os.path.join(OUT_DIR, "caption")
 os.makedirs(JSON_DIR, exist_ok=True)
 os.makedirs(CAPTION_DIR, exist_ok=True)
 
-# Helper functions
+# # Helper functions
+# motion_angle_re = re.compile(r"^(clockwise|anticlockwise)\s*\(\s*([-+]?\d+(?:\.\d+)?)\s*\)$")
+
+# def parse_motion(m: str):
+#     m = (m or "").strip().lower()
+#     if m in {"left-to-right", "right-to-left", "up-to-down", "down-to-up"}:
+#         return ("translate", None)
+#     if m in {"clockwise", "anticlockwise"}:
+#         return ("rotate", 360 if m == "clockwise" else -360)
+#     mo = motion_angle_re.match(m)
+#     if mo:
+#         direction = mo.group(1)
+#         ang = float(mo.group(2))
+#         return ("rotate", ang if direction == "clockwise" else -ang)
+#     return ("unknown", None)
+
+# def is_visibly_animated(shape: str, motion: str, dotted: bool, outline: bool, scaling: float) -> bool:
+#     if scaling is not None and abs(float(scaling) - 1.0) > 1e-9:
+#         return True
+#     kind, angle = parse_motion(motion)
+#     if kind == "translate":
+#         return True
+#     if kind == "rotate":
+#         if shape.startswith("circle"):
+#             return False
+#         if angle is None or abs(angle) < 1e-9:
+#             return False
+#         return True
+#     return False
+
+# def slug(s: str) -> str:
+#     return re.sub(r"[^a-z0-9\-_.]+", "_", (s or "").lower())
+
+# def shape_noun(shape: str) -> str:
+#     s = (shape or "circle").lower()
+#     if ":" in s:
+#         kind, arg = s.split(":", 1)
+#     else:
+#         kind, arg = s, None
+#     if kind == "circle":
+#         return "circle"
+#     if kind == "square":
+#         return "square"
+#     if kind == "rounded-square":
+#         return "rounded square"
+#     if kind == "triangle":
+#         return "triangle"
+#     if kind == "polygon":
+#         try:
+#             n = max(3, int(arg)) if arg else 5
+#         except ValueError:
+#             n = 5
+#         return f"{n}-sided polygon"
+#     if kind == "star":
+#         try:
+#             p = max(3, int(arg)) if arg else 5
+#         except ValueError:
+#             p = 5
+#         return f"{p}-point star"
+#     return s
+
+# def describe_motion(m: str) -> str:
+#     m = (m or "").strip().lower()
+#     if m == "left-to-right":
+#         return "moves from left to right"
+#     if m == "right-to-left":
+#         return "moves from right to left"
+#     if m == "up-to-down":
+#         return "moves from up to down"
+#     if m == "down-to-up":
+#         return "moves from down to up"
+#     if m == "clockwise":
+#         return "spins clockwise"
+#     if m == "anticlockwise":
+#         return "spins anticlockwise"
+#     mo = motion_angle_re.match(m)
+#     if mo:
+#         direction = mo.group(1)
+#         ang = float(mo.group(2))
+#         return (f"rotates clockwise to {ang:g}°" if direction == "clockwise"
+#                 else f"rotates anticlockwise to {ang:g}°")
+#     return "moves"
+
+# def build_caption(shape: str, dotted: bool, outline: bool, dot_spacing: float,
+#                   motion: str, easing: str, scaling: float, duration_s: float,
+#                   size_name: str, color_name: str) -> str:
+#     style = "dotted" if dotted else ("outlined" if outline else "filled")
+#     noun = shape_noun(shape)
+#     motion_phrase = describe_motion(motion)
+#     if abs(float(scaling) - 1.0) > 1e-9:
+#         scale_phrase = f" and scales to {scaling:g}× its size"
+#     else:
+#         scale_phrase = " and keeps its size"
+#     spacing_detail = f" with {dot_spacing:g}px spacing" if dotted else ""
+#     easing_phrase = ("with ease-in easing" if easing == "ease-in"
+#                      else ("with ease-out easing" if easing == "ease-out" else "with linear easing"))
+#     dur = f"{duration_s:.1f}".rstrip("0").rstrip(".")
+#     return f"A {size_name} {color_name} {style} {noun}{spacing_detail} that {motion_phrase}{scale_phrase}, {easing_phrase}, over {dur} seconds."
+
+import random
+import re
+
 motion_angle_re = re.compile(r"^(clockwise|anticlockwise)\s*\(\s*([-+]?\d+(?:\.\d+)?)\s*\)$")
+
+# -----------------------------
+# VARIATION HELPERS
+# -----------------------------
+
+def choose(options):
+    return random.choice(options)
+
+# For style variation
+STYLE_PHRASES = {
+    "dotted": [
+        "dotted",
+        "dot-pattern",
+        "dotted-line"
+    ],
+    "outlined": [
+        "outlined",
+        "stroke-only",
+        "line-art style"
+    ],
+    "filled": [
+        "filled",
+        "solid",
+        "fully filled-in"
+    ]
+}
+
+EASING_PHRASES = {
+    "ease-in": [
+        "using ease-in easing",
+        "starting slowly with ease-in easing",
+        "animated with an ease-in acceleration"
+    ],
+    "ease-out": [
+        "using ease-out easing",
+        "slowing down with ease-out easing",
+        "animated with an ease-out deceleration"
+    ],
+    "linear": [
+        "with linear easing",
+        "moving at a steady linear rate",
+        "animated at constant linear speed"
+    ]
+}
+
+SCALE_TEMPLATES = [
+    "and scales to {scaling:g}× its size",
+    "scaling up to {scaling:g}× its original size",
+    "changing size to {scaling:g}×",
+]
+
+NO_SCALE_TEMPLATES = [
+    "and keeps its size",
+    "without changing its size",
+    "while maintaining its original size"
+]
+
+MOTION_TEMPLATES = [
+    "that {motion_phrase}{scale_phrase}",
+    "which {motion_phrase}{scale_phrase}",
+    "as it {motion_phrase}{scale_phrase}",
+]
+
+DURATION_TEMPLATES = [
+    "over {duration_s} seconds",
+    "throughout a {duration_s}-second animation",
+    "within {duration_s} seconds",
+    "completed in {duration_s} seconds",
+]
+
+CAPTION_TEMPLATES = [
+    "A {size_name} {color_name} {style} {noun}{spacing_detail} {motion_clause}, {easing_clause}, {duration_clause}.",
+    "A {size_name} {color_name} {style} {noun}{spacing_detail} {motion_clause} {easing_clause} {duration_clause}.",
+    "This {size_name} {color_name} {style} {noun}{spacing_detail} {motion_clause}, {easing_clause}, lasting {duration_clause}.",
+]
+
+# -----------------------------
+# ORIGINAL PARSE FUNCTIONS
+# -----------------------------
 
 def parse_motion(m: str):
     m = (m or "").strip().lower()
@@ -453,6 +633,7 @@ def parse_motion(m: str):
         ang = float(mo.group(2))
         return ("rotate", ang if direction == "clockwise" else -ang)
     return ("unknown", None)
+
 
 def is_visibly_animated(shape: str, motion: str, dotted: bool, outline: bool, scaling: float) -> bool:
     if scaling is not None and abs(float(scaling) - 1.0) > 1e-9:
@@ -468,8 +649,14 @@ def is_visibly_animated(shape: str, motion: str, dotted: bool, outline: bool, sc
         return True
     return False
 
+
 def slug(s: str) -> str:
     return re.sub(r"[^a-z0-9\-_.]+", "_", (s or "").lower())
+
+
+# -----------------------------
+# SMALL VARIATION FOR NOUN
+# -----------------------------
 
 def shape_noun(shape: str) -> str:
     s = (shape or "circle").lower()
@@ -477,65 +664,142 @@ def shape_noun(shape: str) -> str:
         kind, arg = s.split(":", 1)
     else:
         kind, arg = s, None
+
+    # small variation options
     if kind == "circle":
-        return "circle"
+        return choose(["circle", "circular shape"])
     if kind == "square":
-        return "square"
+        return choose(["square", "four-sided square"])
     if kind == "rounded-square":
-        return "rounded square"
+        return choose(["rounded square", "soft-cornered square"])
     if kind == "triangle":
-        return "triangle"
+        return choose(["triangle", "three-sided triangle"])
     if kind == "polygon":
         try:
             n = max(3, int(arg)) if arg else 5
         except ValueError:
             n = 5
-        return f"{n}-sided polygon"
+        return choose([f"{n}-sided polygon", f"{n}-gon"])
     if kind == "star":
         try:
             p = max(3, int(arg)) if arg else 5
         except ValueError:
             p = 5
-        return f"{p}-point star"
+        return choose([f"{p}-point star", f"{p}-pointed star"])
     return s
+
+
+# -----------------------------
+# VARIED MOTION DESCRIPTIONS
+# -----------------------------
 
 def describe_motion(m: str) -> str:
     m = (m or "").strip().lower()
-    if m == "left-to-right":
-        return "moves from left to right"
-    if m == "right-to-left":
-        return "moves from right to left"
-    if m == "up-to-down":
-        return "moves from up to down"
-    if m == "down-to-up":
-        return "moves from down to up"
-    if m == "clockwise":
-        return "spins clockwise"
-    if m == "anticlockwise":
-        return "spins anticlockwise"
+
+    table = {
+        "left-to-right": [
+            "moves from left to right",
+            "slides horizontally from left to right",
+            "shifts left to right"
+        ],
+        "right-to-left": [
+            "moves from right to left",
+            "slides right to left",
+            "shifts horizontally toward the left"
+        ],
+        "up-to-down": [
+            "moves downward",
+            "drops from top to bottom",
+            "shifts from up to down"
+        ],
+        "down-to-up": [
+            "moves upward",
+            "rises from bottom to top",
+            "shifts from down to up"
+        ],
+        "clockwise": [
+            "spins clockwise",
+            "rotates in a clockwise direction",
+            "turns clockwise"
+        ],
+        "anticlockwise": [
+            "spins anticlockwise",
+            "rotates in an anticlockwise direction",
+            "turns anticlockwise"
+        ]
+    }
+
+    if m in table:
+        return choose(table[m])
+
     mo = motion_angle_re.match(m)
     if mo:
         direction = mo.group(1)
         ang = float(mo.group(2))
-        return (f"rotates clockwise to {ang:g}°" if direction == "clockwise"
-                else f"rotates anticlockwise to {ang:g}°")
-    return "moves"
+        if direction == "clockwise":
+            return choose([
+                f"rotates clockwise to {ang:g}°",
+                f"turns clockwise up to {ang:g}°",
+                f"spins clockwise reaching {ang:g}°"
+            ])
+        else:
+            return choose([
+                f"rotates anticlockwise to {ang:g}°",
+                f"turns anticlockwise up to {ang:g}°",
+                f"spins anticlockwise reaching {ang:g}°"
+            ])
+
+    return choose(["moves", "shifts", "animates"])
+
+
+# -----------------------------
+# MAIN CAPTION GENERATOR WITH VARIATION
+# -----------------------------
 
 def build_caption(shape: str, dotted: bool, outline: bool, dot_spacing: float,
                   motion: str, easing: str, scaling: float, duration_s: float,
                   size_name: str, color_name: str) -> str:
-    style = "dotted" if dotted else ("outlined" if outline else "filled")
+
+    # varied style
+    base_style = "dotted" if dotted else ("outlined" if outline else "filled")
+    style = choose(STYLE_PHRASES[base_style])
+
     noun = shape_noun(shape)
     motion_phrase = describe_motion(motion)
+
+    # scaling variation
     if abs(float(scaling) - 1.0) > 1e-9:
-        scale_phrase = f" and scales to {scaling:g}× its size"
+        scale_phrase = choose(SCALE_TEMPLATES).format(scaling=scaling)
     else:
-        scale_phrase = " and keeps its size"
+        scale_phrase = choose(NO_SCALE_TEMPLATES)
+
     spacing_detail = f" with {dot_spacing:g}px spacing" if dotted else ""
-    easing_phrase = ("with ease-in easing" if easing == "ease-in"
-                     else ("with ease-out easing" if easing == "ease-out" else "with linear easing"))
-    dur = f"{duration_s:.1f}".rstrip("0").rstrip(".")
-    return f"A {size_name} {color_name} {style} {noun}{spacing_detail} that {motion_phrase}{scale_phrase}, {easing_phrase}, over {dur} seconds."
+
+    # easing variation
+    easing_key = easing if easing in EASING_PHRASES else "linear"
+    easing_clause = choose(EASING_PHRASES[easing_key])
+
+    # unify motion clause
+    motion_clause = choose(MOTION_TEMPLATES).format(
+        motion_phrase=motion_phrase,
+        scale_phrase=scale_phrase,
+    )
+
+    duration_clean = f"{duration_s:.1f}".rstrip("0").rstrip(".")
+    duration_clause = choose(DURATION_TEMPLATES).format(duration_s=duration_clean)
+
+    template = choose(CAPTION_TEMPLATES)
+
+    return template.format(
+        size_name=size_name,
+        color_name=color_name,
+        style=style,
+        noun=noun,
+        spacing_detail=spacing_detail,
+        motion_clause=motion_clause,
+        easing_clause=easing_clause,
+        duration_clause=duration_clause,
+    )
 
 # === UNIFORM SAMPLER ===
 
@@ -566,7 +830,7 @@ def sample_params():
     }
 
 # Set your target number of samples here
-N_SAMPLES = 3000  # <--- change as needed
+N_SAMPLES = 300  # <--- change as needed
 RANDOM_SEED = 42  # e.g., set to 42 for reproducible sampling
 
 if RANDOM_SEED is not None:

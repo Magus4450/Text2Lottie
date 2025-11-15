@@ -19,6 +19,15 @@ generated_data
 /finetune_output
 *.out
 
+/generate_llama_32_3B_V_FIX
+/dataset_variations
+/big_data
+/small_data
+/outputs_*
+/only_scraped_data
+/masked_data
+/small_variations_data
+
 **/*.json*
 
 *.zip

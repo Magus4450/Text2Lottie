@@ -225,9 +225,14 @@ def make_square_trace(
 STATIC_TEMPLATES = [
     "A {color_word} square outline with {size_word} dimensions, drawn with a {stroke_word} stroke{position_phrase}{rotation_phrase}.",
     "An outlined {color_word} square of {size_word} size, rendered with a {stroke_word} line width{position_phrase}{rotation_phrase}.",
-    "A {color_word} square outline measuring {square_size} pixels, with {stroke_word} stroke thickness{position_phrase}{rotation_phrase}.",
+    "A {color_word} square outline measuring {square_size}, with {stroke_word} stroke thickness{position_phrase}{rotation_phrase}.",
     "A simple {color_word} outlined square of {size_word} size, drawn with a {stroke_word} stroke{position_phrase}{rotation_phrase}.",
     "An outlined square in {color_word} with {size_word} dimensions and a {stroke_word} line{position_phrase}{rotation_phrase}.",
+    "A centered {color_word} square outline of {size_word} size, drawn using a uniform {stroke_word} stroke{position_phrase}{rotation_phrase}.",
+    "A geometric {color_word} square outline with {size_word} proportions, created using a {stroke_word} stroke{position_phrase}{rotation_phrase}.",
+    "A minimal {color_word} square outline sized at {size_word}, defined by a clean {stroke_word} line{position_phrase}{rotation_phrase}.",
+    "A {color_word} outlined square with precise {size_word} dimensions and a consistent {stroke_word} stroke{position_phrase}{rotation_phrase}.",
+    "A {color_word} square outline of {square_size}, drawn with a crisp {stroke_word} stroke and positioned cleanly{position_phrase}{rotation_phrase}.",
 ]
 
 ANIMATION_TEMPLATES = [
@@ -235,8 +240,14 @@ ANIMATION_TEMPLATES = [
     "An animated path-tracing effect draws a {color_word} square {trace_phrase}, moving at a {speed_word} speed with {stroke_word} line thickness{position_phrase}{rotation_phrase}.",
     "A {color_word} outlined square with {size_word} dimensions appears through a {trace_phrase} drawing animation at {speed_word} speed, using a {stroke_word} stroke{position_phrase}{rotation_phrase}.",
     "Path tracing animation reveals a {color_word} square by drawing it {trace_phrase} at a {speed_word} pace with a {stroke_word} line{position_phrase}{rotation_phrase}.",
-    "A {color_word} square outline measuring {square_size} pixels is progressively drawn {trace_phrase} in a {speed_word} tracing motion with {stroke_word} stroke width{position_phrase}{rotation_phrase}.",
+    "A {color_word} square outline measuring {square_size} is progressively drawn {trace_phrase} in a {speed_word} tracing motion with {stroke_word} stroke width{position_phrase}{rotation_phrase}.",
     "An outlined square in {color_word} of {size_word} size gradually appears through a {trace_phrase} path animation at {speed_word} speed, rendered with a {stroke_word} stroke{position_phrase}{rotation_phrase}.",
+    "A {color_word} square of {size_word} size forms as its outline is traced {trace_phrase} while moving at a {speed_word} drawing speed with a {stroke_word} stroke{position_phrase}{rotation_phrase}.",
+    "A {color_word} outlined square with {size_word} proportions emerges through a {trace_phrase} path-tracing animation at {speed_word} speed, using a precise {stroke_word} stroke{position_phrase}{rotation_phrase}.",
+    "A {color_word} square defined by {square_size} dimensions is animated by tracing its outline {trace_phrase} at a steady {speed_word} pace using a {stroke_word} stroke{position_phrase}{rotation_phrase}.",
+    "A dynamic animation draws a {color_word} square of {size_word} size, traced {trace_phrase} with a {stroke_word} outline while progressing at a {speed_word} speed{position_phrase}{rotation_phrase}.",
+    "A smooth path animation outlines a {color_word} square of {size_word} size by drawing it {trace_phrase} with a {stroke_word} line at {speed_word} speed{position_phrase}{rotation_phrase}.",
+    "A {color_word} square outline of {square_size} dimensions materializes as it is traced {trace_phrase}, animated at a {speed_word} rate with a consistent {stroke_word} stroke{position_phrase}{rotation_phrase}.",
 ]
 
 
@@ -282,12 +293,16 @@ def describe_trace_direction(trace_dir: str) -> str:
 
 def describe_size(size: int) -> str:
     """Return description of square size."""
-    if size <= 120:
-        return "small"
+    # [50, 150, 200, 250, 300]
+    if size <= 100:
+        return "very small"
     elif size <= 180:
+        return "small"
+    elif size <= 210:
         return "medium"
-    else:
+    elif size <= 260:
         return "large"
+    return "very large"
 
 
 def describe_position(pos: tuple, canvas_size: int) -> str:
@@ -399,12 +414,12 @@ def main():
     os.makedirs(anim_dir, exist_ok=True)
     
     # Number of total samples
-    N_SAMPLES = 100
+    N_SAMPLES = 30
     
     colors = VISIBLE_COLORS
-    square_sizes = [100, 120, 150, 180, 200, 220, 250]
-    stroke_widths = [4, 6, 8, 10, 12]
-    trace_speeds = [0.5, 0.8, 1.0, 1.5, 2.0]
+    square_sizes = [50, 150, 200, 250, 300]
+    stroke_widths = [4, 10, 12]
+    trace_speeds = [0.5, 1.0, 2.0]
     trace_directions = ["clockwise", "counterclockwise"]
     
     # Position variations (avoiding edges)
@@ -421,7 +436,7 @@ def main():
     ]
     
     # Rotation variations (in degrees)
-    rotations = [0, 15, 30, 45, 60, 90, 120, 135]
+    rotations = [0, 15, 45, 60, 90, 169]
     
     # Build all combinations
     all_combinations = list(itertools.product(
@@ -433,7 +448,7 @@ def main():
     sampled_combos = random.sample(all_combinations, min(N_SAMPLES, len(all_combinations)))
     
     for color, square_size, stroke_width, trace_speed, trace_dir, position, rotation in sampled_combos:
-        duration = 3.0
+        duration = 2.0
         
         base_name = make_square_trace(
             color=color,

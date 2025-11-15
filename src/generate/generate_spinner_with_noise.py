@@ -274,19 +274,30 @@ def make_spinner(
 STATIC_TEMPLATES = [
     "A {color_word} spinner consisting of {entity_word} small circular dots arranged evenly in a ring of {radius_word} radius.",
     "A circular arrangement of {entity_word} {color_word} dots forming a ring with a radius of {radius_word}.",
-    "An even ring of {entity_word} {color_word} filled circles positioned around the center of the {canvas_word} canvas.",
+    "An even ring of {entity_word} {color_word} filled circles positioned around the center of the canvas.",
     "A centered circular structure made up of {entity_word} {color_word} dots, placed at a radius of {radius_word}.",
+    "A symmetrical ring of {entity_word} {color_word} circles arranged evenly at a distance of {radius_word} from the center.",
+    "A radial formation of {entity_word} {color_word} dots placed in a perfect circle of radius {radius_word}.",
+    "A ring-shaped pattern composed of {entity_word} evenly spaced {color_word} circular dots centered on the canvas.",
+    "A {color_word} circular dot pattern consisting of {entity_word} elements placed uniformly along a ring of {radius_word}.",
+    "A ring of {entity_word} {color_word} small filled circles, each positioned at the same {radius_word} distance from the center.",
+    "A structured circular grid of {entity_word} {color_word} dots forming a ring with a radius of {radius_word}, centered on the canvas.",
 ]
 
 ANIMATION_TEMPLATES = [
-    "A {color_word} spinner with {entity_word} dots arranged in a {radius_word}-pixel ring rotates {direction_word} at a {speed_word} speed, while each dot fades in and out sequentially.",
-    "An animation showing {entity_word} {color_word} circles forming a {radius_word}-pixel ring that spins {direction_word} with a {speed_word} rotation and rhythmic opacity change.",
+    "A {color_word} spinner with {entity_word} dots arranged in a {radius_word} ring rotates {direction_word} at a {speed_word} speed, while each dot fades in and out sequentially.",
+    "An animation showing {entity_word} {color_word} circles forming a {radius_word} ring that spins {direction_word} with a {speed_word} rotation and rhythmic opacity change.",
     "A {color_word} circular spinner of {entity_word} dots, evenly spaced in a ring of radius {radius_word}, rotates {direction_word} around the center at a {speed_word} pace while pulsing in brightness.",
-    "A spinner made up of {entity_word} small {color_word} dots arranged in a {radius_word}-pixel ring, rotating {direction_word} with a {speed_word} motion, each dot alternately appearing and fading.",
-    "A {direction_word}-rotating {color_word} spinner composed of {entity_word} circular dots in a ring of {radius_word} pixels, smoothly animating with a {speed_word} rhythm.",
-    "An animation of {entity_word} {color_word} dots arranged in a circular ring of {radius_word} pixels that rotate {direction_word} at a {speed_word} rate while their brightness cycles in sequence."
+    "A spinner made up of {entity_word} small {color_word} dots arranged in a {radius_word} ring, rotating {direction_word} with a {speed_word} motion, each dot alternately appearing and fading.",
+    "A {direction_word}-rotating {color_word} spinner composed of {entity_word} circular dots in a ring of {radius_word}, smoothly animating with a {speed_word} rhythm.",
+    "An animation of {entity_word} {color_word} dots arranged in a circular ring of {radius_word} that rotate {direction_word} at a {speed_word} rate while their brightness cycles in sequence.",
+    "A {color_word} dot-based spinner of {entity_word} elements placed along a ring of radius {radius_word}, rotating {direction_word} with a {speed_word} speed and sequential opacity pulses.",
+    "A circular spinner formed by {entity_word} {color_word} dots at {radius_word} radius rotates {direction_word} at a {speed_word} pace, each dot brightening and dimming in turn.",
+    "A ring of {entity_word} small {color_word} circles at {radius_word} distance rotates {direction_word} at a {speed_word} rate while the dots fade in a looping sequence.",
+    "A {color_word} spinner of {entity_word} evenly spaced dots arranged in a {radius_word} ring, rotating {direction_word}, with dot brightness oscillating at a {speed_word} tempo.",
+    "A dynamic animation of {entity_word} {color_word} dots positioned around a {radius_word} ring that spin {direction_word} at a {speed_word} speed while cycling through opacity levels.",
+    "A smoothly rotating {color_word} ring of {entity_word} dots spaced at {radius_word} radius, spinning {direction_word} with a {speed_word} rotation and synchronized fade effects.",
 ]
-
 
 def color_name_from_hex(hex_color: str) -> str:
     """Return readable color name for a given hex code."""
@@ -305,6 +316,12 @@ def describe_speed(speed: float) -> str:
 def describe_direction(direction: str) -> str:
     return direction
 
+def describe_radii(radii: int) -> str:
+    if radii > 100:
+        return "big"
+    elif radii > 50:
+        return "medium"
+    return "small"
 
 def extract_params(base_name: str):
     m = re.search(
@@ -326,7 +343,7 @@ def generate_captions(base_name: str, static_dir: str, anim_dir: str):
     color_hex, entity_count, radius, speed, direction = extract_params(base_name)
     color_word = color_name_from_hex(color_hex)
     entity_word = str(entity_count)
-    radius_word = str(radius)
+    radius_word = describe_radii(radius)
     direction_word = describe_direction(direction)
     speed_word = describe_speed(speed)
     canvas_word = "512x512"
@@ -368,13 +385,13 @@ def main():
     os.makedirs(anim_dir, exist_ok=True)
 
     # number of total samples you want
-    N_SAMPLES = 100  # change as desired
+    N_SAMPLES = 30  # change as desired
 
     colors = VISIBLE_COLORS
-    entity_counts = [8, 10, 15]
-    ring_radii = [60, 80, 100]
-    entity_radii = [8, 10, 12]
-    rotation_speeds = [-1.2, -1.0, -0.8, 0.8, 1.0, 1.2]
+    entity_counts = [5, 10, 15]
+    ring_radii = [30, 70, 120]
+    entity_radii = [5, 15, 30]
+    rotation_speeds = [-2, -1.0, -0.8, 0.8, 1.0, 2]
     directions = ["clockwise", "anticlockwise"]
 
     # Build all possible combinations

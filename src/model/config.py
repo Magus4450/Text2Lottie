@@ -1,9 +1,9 @@
 
 # Model Configuration
 MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct" 
-NICKNAME = "llama_32_3B_SMOL"
+NICKNAME = "llama_32_3B_MASKED"
 
-MAX_SEQ_LENGTH = 2048  # Maximum sequence length (reduce if OOM)
+MAX_SEQ_LENGTH = 3072  # Maximum sequence length (reduce if OOM)
 LOAD_IN_4BIT = False    # Use 4-bit quantization (recommended)
 DTYPE = "float16"           # None for auto, "float16" or "bfloat16"
 
@@ -18,7 +18,7 @@ TARGET_MODULES = [     # Which layers to apply LoRA to
 ]
 
 # Training Configuration
-BATCH_SIZE = 4                    # Per device batch size
+BATCH_SIZE = 2                    # Per device batch size
 GRADIENT_ACCUMULATION_STEPS = 4   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
 NUM_EPOCHS = 2                    # Number of training epochs
 LEARNING_RATE = 2e-4              # Learning rate
@@ -45,13 +45,13 @@ SHUFFLE_SEED = 3407               # Random seed for shuffling
 OUTPUT_DIR = f"outputs_{NICKNAME}"                      # Training checkpoints directory
 MODEL_OUTPUT_DIR = f"lottie_model_{NICKNAME}"          # Final model directory
 LORA_OUTPUT_DIR = f"lottie_model_lora_{NICKNAME}"      # LoRA adapters only directory
-SAVE_STRATEGY = "epoch"                     # When to save checkpoints
+SAVE_STRATEGY = "steps"                     # When to save checkpoints
 SAVE_TOTAL_LIMIT = 50                        # Maximum number of checkpoints to keep
 
 # Evaluation Configuration
 EVAL_STRATEGY = "steps"           # When to evaluate
-EVAL_STEPS = 500
-SAVE_STEPS = 500
+EVAL_STEPS = 50
+SAVE_STEPS = 100
 METRIC_FOR_BEST_MODEL="eval_loss"
 LOAD_BEST_MODEL = True           # Load best model at end based on eval loss
 

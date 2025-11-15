@@ -1,4 +1,10 @@
+import os
+import re
+import json
 import torch
+from ast import literal_eval
+from tqdm import tqdm
+
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 from peft import PeftModel
 from src.model.semantic_tokenizer import to_semantic, from_semantic, LottieSemanticTokenizer
@@ -50,14 +56,14 @@ if new_vocab != old_vocab:
 base_model.config.pad_token_id = tokenizer.pad_token_id
 
 print("Loading LoRA adapter weights...")
-model = PeftModel.from_pretrained(base_model, config.MODEL_OUTPUT_DIR)
-# model = PeftModel.from_pretrained(base_model, "outputs_llama_32_3B_SCRAPED_ONLY/checkpoint-600")
+# model = PeftModel.from_pretrained(base_model, config.MODEL_OUTPUT_DIR)
+model = PeftModel.from_pretrained(base_model, "lottie_model_llama_32_3B_V_FIX")
 model.eval()
 
 # -----------------------------
 # Generation function
 # -----------------------------
-def generate_response(prompt: str, max_new_tokens: int = 4096, temperature: float = 0.7):
+def generate_response(prompt: str, max_new_tokens: int = config.MAX_SEQ_LENGTH, temperature: float = 0.7):
     """
     Generate Lottie JSON or natural-language response from prompt.
     """
@@ -88,24 +94,42 @@ def generate_response(prompt: str, max_new_tokens: int = 4096, temperature: floa
 
     generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     res = from_semantic(generated_text)
-    return res
+    return res, text_input
 
 # -----------------------------
 # Example usage
 # -----------------------------
 if __name__ == "__main__":
-    # prompt = "What does the following lottie JSON animation represent?\n```json\n{\"fr\":60,\"ip\":0,\"op\":120,\"w\":512,\"h\":512,\"assets\":[],\"layers\":[{\"ind\":1,\"ty\":4,\"ks\":{\"o\":{\"a\":0,\"k\":100},\"r\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[0],\"e\":[0],\"i\":{\"x\":[0.67],\"y\":[1.0]},\"o\":{\"x\":[0.33],\"y\":[0.0]}},{\"t\":120}]},\"p\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[256.0,256.0],\"e\":[256.0,256.0],\"i\":{\"x\":[0.67,0.67],\"y\":[1.0,1.0]},\"o\":{\"x\":[0.33,0.33],\"y\":[0.0,0.0]}},{\"t\":120}]},\"a\":{\"a\":0,\"k\":[0,0,0]},\"s\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[100,100,100],\"e\":[150.0,150.0,100],\"i\":{\"x\":[0.67,0.67,0.67],\"y\":[1.0,1.0,1.0]},\"o\":{\"x\":[0.33,0.33,0.33],\"y\":[0.0,0.0,0.0]}},{\"t\":120}]}},\"ao\":0,\"shapes\":[{\"ty\":\"gr\",\"it\":[{\"ty\":\"el\",\"p\":{\"a\":0,\"k\":[0,0]},\"s\":{\"a\":0,\"k\":[100,100]}},{\"ty\":\"st\",\"c\":{\"a\":0,\"k\":[0.0,0.0,0.0,1]},\"o\":{\"a\":0,\"k\":100},\"w\":{\"a\":0,\"k\":8},\"lc\":2,\"lj\":2,\"ml\":4},{\"ty\":\"tr\",\"p\":{\"a\":0,\"k\":[0,0]},\"a\":{\"a\":0,\"k\":[0,0]},\"s\":{\"a\":0,\"k\":[100,100]},\"r\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[0],\"e\":[-90.0],\"i\":{\"x\":[0.67],\"y\":[1.0]},\"o\":{\"x\":[0.33],\"y\":[0.0]}},{\"t\":120}]},\"o\":{\"a\":0,\"k\":100}}]}],\"ip\":0,\"op\":120,\"st\":0}]}\n```"
-    prompts = {
-        "normal": "Generate a lottie JSON animation given the following description: ",
-        "static": "Given a static lottie JSON animation, add animation with the given description.\n\nStatic:\n",
-        "rev": "What does the following lottie JSON animation represent?\n"
-    }
+    with open("test.jsonl", "r") as test_set:
+        lines = test_set.readlines()
+    
+    MODEL_NAME = "llama_32_3B_V_FIX"
+    OUTPUT_DIR = f"generate_{MODEL_NAME}"
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    while True:
-        type_ = input("type>")
-        user = input("prompt>")
-        prompt = prompts[type_] + user
+    gold_path = os.path.join(OUTPUT_DIR, "gold")
+    os.makedirs(gold_path, exist_ok=True)
+    gen_path = os.path.join(OUTPUT_DIR, "gen")
+    os.makedirs(gen_path, exist_ok=True)
 
-        print(f"\nPrompt:\n{prompt}")
-        output = generate_response(prompt)
-        print("\nModel output:\n", output)
+    for line in tqdm(lines, total=len(lines), desc="Eval"):
+        j_line = literal_eval(line)
+        base_name = j_line['id'].split("::")[-1]
+        if os.path.exists(os.path.join(gen_path, f"{base_name}.json")):
+            print(f"Skipping {base_name}")
+            continue
+        
+        prompt = j_line["messages"][0]["content"]
+        gold_lottie = j_line['messages'][1]['content']
+
+        # generate
+        res, text_input = generate_response(prompt)
+        pattern = r"<\|.*?\|>"
+        text_input = re.sub(pattern, "", text_input, flags=re.DOTALL)
+        output = res.replace(text_input, "")
+
+        with open(os.path.join(gen_path, f"{base_name}.json"), "w") as gen_out:
+            gen_out.write(output)
+        
+        with open(os.path.join(gold_path, f"{base_name}.json"), "w") as f:
+            f.write(gold_lottie)

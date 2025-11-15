@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=finetune_llama_32_3b
-#SBATCH --output=finetune_output/finetune_llama_32_3b_%j.out
+#SBATCH --job-name=finetune_llama_32_3b_masked
+#SBATCH --output=finetune_output/finetune_llama_32_3b_masked_%j.out
 #SBATCH --gres=gpu:1
 #SBATCH --time=24:00:00
 #SBATCH --mem=32G

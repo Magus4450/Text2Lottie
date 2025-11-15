@@ -190,8 +190,8 @@ def remove_animation(lottie: Dict[str, Any]) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    input_folder = "generated_data/json"
-    output_folder = "generated_data/static_json"
+    input_folder = "dataset_variations/generated_data/json"
+    output_folder = "dataset_variations/generated_data/static_json"
     os.makedirs(output_folder, exist_ok=True)
 
     for fname in os.listdir(input_folder):

@@ -4,8 +4,8 @@ import json
 import random
 import re
 
-JSON_DIR = "generated_data/json"
-STATIC_CAPTION_DIR = "generated_data/static_caption"
+JSON_DIR = "dataset_variations/generated_data/json"
+STATIC_CAPTION_DIR = "dataset_variations/generated_data/static_caption"
 os.makedirs(STATIC_CAPTION_DIR, exist_ok=True)
 
 CAPTION_TEMPLATES = [
@@ -17,6 +17,14 @@ CAPTION_TEMPLATES = [
     "A {shape_word}, {size_word} and {style_word}, placed {position_word} against a neutral background.",
     "A {size_word} {shape_word} with a {style_word} finish, sitting {position_word} of the frame.",
     "A centrally aligned {size_word} {shape_word} rendered in {color_word}, {style_word} in style, found {position_word}.",
+    "A {size_word} {color_word} {shape_word}, styled in a {style_word} manner, positioned {position_word}.",
+    "A {shape_word} featuring a {style_word} appearance, {size_word} in scale and located {position_word}.",
+    "Placed {position_word}, a {size_word} {color_word} {shape_word} appears with a {style_word} look.",
+    "A {style_word} {shape_word} of {size_word} dimensions, shown {position_word} and colored in {color_word}.",
+    "A {color_word} {shape_word}, designed in a {style_word} style and sized {size_word}, resting {position_word}.",
+    "A {shape_word} with {style_word} styling and {size_word} proportions positioned clearly {position_word}.",
+    "Situated {position_word}, a {size_word} {shape_word} rendered in {color_word} displays a {style_word} finish.",
+    "A visually simple {color_word} {shape_word}, {size_word} in size and {style_word} in design, located {position_word}.",
 ]
 
 # ------------------------------------------------------------

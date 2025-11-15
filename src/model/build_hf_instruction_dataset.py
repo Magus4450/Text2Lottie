@@ -27,14 +27,40 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
+import numpy as np
 
 # -------------------------------------------------------------
 # CONFIG
 # -------------------------------------------------------------
-ROOT_DIR = "dataset_new"
+ROOT_DIR = "dataset_variations"
 WITH_STATIC = {"generated_data"}  # dataset folders that have static_json & static_caption
 
 random.seed(42)
+
+def shuffle_sibling_kv(obj):
+    """
+    Recursively shuffle only sibling key–value pairs in dictionaries.
+    Lists are kept as-is but their elements are recursively processed.
+    """
+
+    # If list → process children, do NOT shuffle list order
+    if isinstance(obj, list):
+        return [shuffle_sibling_kv(x) for x in obj]
+
+    # If dict → shuffle only *this level's* keys
+    elif isinstance(obj, dict):
+        # First process the children so internal order stays valid
+        items = [(k, shuffle_sibling_kv(v)) for k, v in obj.items()]
+
+        # Now shuffle ONLY these siblings
+        random.shuffle(items)
+
+        # Rebuild the dict preserving shuffled order
+        return {k: v for k, v in items}
+
+    # Primitive → return directly
+    else:
+        return obj
 
 
 # -------------------------------------------------------------
@@ -82,14 +108,18 @@ def read_json_files_as_string(folder: Path) -> Dict[str, str]:
     data = {}
     if folder.exists():
         for p in folder.glob("*.json"):
-            try:
-                obj = json.loads(p.read_text().strip())
-                cleaned = _clean(obj)
-                s = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"))
-                s = "".join(s.split())  # remove all whitespace
-                data[p.stem] = s
-            except Exception as e:
-                print(f"[WARN] Failed JSON {p}: {e}")
+            # try:
+            obj = json.loads(p.read_text().strip())
+            cleaned = _clean(obj)
+            s = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"))
+
+            # shuffle the nodes
+            s = shuffle_sibling_kv(s)
+
+            s = "".join(s.split())  # remove all whitespace
+            data[p.stem] = s
+            # except Exception as e:
+            #     print(f"[WARN] Failed JSON {p}: {e}")
     return data
 
 
@@ -120,6 +150,39 @@ def build_static_augment_prompt(static_json: str, desc: str):
         f"Static:\n```json\n{static_json}\n```\n\nDescription:\n{desc}"
     )
 
+def remove_random_layers_from_string(json_str):
+    data = json.loads(json_str)
+
+    layers = data.get("layers", [])
+    total_layers = len(layers)
+
+    if total_layers <= 1:
+        # Nothing removed
+        return json.dumps(data, indent=2), []
+
+    # Choose random number of layers to remove (1–3 but not removing all)
+    k = random.choice([1, 2])
+    num_to_remove = min(total_layers - 1, k)
+
+    indices = list(range(total_layers))
+    remove_indices = set(random.sample(indices, num_to_remove))
+
+    removed_layers = [layers[idx] for idx in sorted(remove_indices)]
+
+    new_layers = [
+        layer for idx, layer in enumerate(layers)
+        if idx not in remove_indices
+    ]
+
+    data["layers"] = new_layers
+
+    return "".join(str(json.dumps(data, indent=0)).split()), ["".join(str(k).split()) for k in removed_layers]
+
+def build_lottie_layer_masked_prompt(masked_json: str, desc: str):
+    return (
+        "Given the description of a lottie JSON animation and its corresponding JSON with some layers removed, complete the JSON to represent the description.\n\n"
+        f"Masked JSON:\n```json\n{masked_json}\n```\n\nDescription:\n{desc}"
+    )
 
 # -------------------------------------------------------------
 # PROCESS A SINGLE DATASET FOLDER
@@ -131,6 +194,7 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
         "static_fwd": [],
         "static_rev": [],
         "static_augment": [],
+        "masked": [],
     }
 
     # load all required components
@@ -160,6 +224,14 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
             metadata={"dataset": ds_name, "type": "normal_rev", "key": k}
         ))
 
+        if random.random() < 0.5:
+            masked_json, removed_layers = remove_random_layers_from_string(anim_json[k])
+            out["masked"].append(Example(
+                id=f"{ds_name}::masked::fwd::{k}",
+                messages=mk_messages(build_lottie_layer_masked_prompt(masked_json, anim_caps[k]), "\n".join([f"Layer {i}: {l}" for i, l in enumerate(removed_layers)])),
+                metadata={"dataset": ds_name, "type": "masked", "key": k}
+            ))
+
     # ---- static ----
     if with_static:
         for k in static_keys:
@@ -188,14 +260,15 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
         print(k, len(v))
     
     # only return some sample copy of out
-    if "scraped_data" in ds_name:
-        return out
-    small_out = {}
-    sampling_prop = 0.5
-    for k, v in out.items():
-        small_out[k] = np.random.choice(v, size=int(len(v) * sampling_prop), replace=False)
-
-    return small_out
+    # if "scraped_data" in ds_name:
+    #     return out
+    # small_out = {}
+    # sampling_prop = 0.3 if not "generated_data" in ds_name else 0.1
+    # for k, v in out.items():
+    #     temp = np.random.choice(v, size=int(len(v) * sampling_prop), replace=False)
+    #     small_out[k] = temp
+    #     print("new:", k, len(temp))
+    return out
 
 
 # -------------------------------------------------------------
@@ -247,6 +320,12 @@ def main():
     dataset_examples = {}
     for ds_path in sorted(p for p in root.iterdir() if p.is_dir()):
         ds_name = ds_path.name
+
+        # DOING THIS WILL ONLY CREATE DATASET WITH SCRAPED_DATA
+        # if "scraped_data" not in ds_name:
+        #     print("Skipping: ", ds_name)
+        #     continue
+
         print(f"[INFO] Processing {ds_name}")
         dataset_examples[ds_name] = process_dataset(ds_name, ds_path, ds_name in WITH_STATIC)
 
@@ -270,7 +349,7 @@ def main():
                 train.append(ex)
 
         # add all other training-only types
-        for typ in ["normal_rev", "static_fwd", "static_rev", "static_augment"]:
+        for typ in ["normal_rev", "static_fwd", "static_rev", "static_augment", "masked"]:
             for ex in parts[typ]:
                 ex.metadata["split"] = "train"
                 train.append(ex)

@@ -249,14 +249,14 @@ def generate_dataset(
 ):
     if param_space is None:
         param_space = {
-            "ring_count": [2,3,4,5],
-            "max_diam_ratio": [0.7, 0.8, 0.9],
-            "stroke_px": [6, 8, 10, 12],
+            "ring_count": [4, 8],
+            "max_diam_ratio": [0.3, 0.7, 0.9],
+            "stroke_px": [6, 12],
             "color_hex": ["#00AEEF", "#22C55E", "#8B5CF6", "#FF3366", "#F59E0B", "#111827"],
-            "stagger_ratio": [0.10, 0.15, 0.20, 0.30],
+            "stagger_ratio": [0.10, 0.30],
             "life_ratio": [0.55, 0.65, 0.75],
-            "duration": [1.6, 2.0, 2.4, 3.0],
-            "fps": [30, 60],
+            "duration": [2],
+            "fps": [30],
         }
 
     rng = random.Random(seed)
@@ -341,4 +341,4 @@ def generate_dataset(
 # CLI
 # ---------------------------
 if __name__ == "__main__":
-    generate_dataset(n=100, output_folder="out_ripples")
+    generate_dataset(n=5, output_folder="dataset_variations/ripples")

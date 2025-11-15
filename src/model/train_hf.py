@@ -206,18 +206,7 @@ training_args = TrainingArguments(
 # -----------------------------
 # Trainer
 # -----------------------------
-class EpochSavingTrainer(Trainer):
-    def _save(self, output_dir=None, state_dict=None):
-        """Save model at end of each epoch to its own folder."""
-        epoch = int(self.state.epoch)
-        save_path = os.path.join(self.args.output_dir, f"epoch_{epoch}")
-
-        os.makedirs(save_path, exist_ok=True)
-        super()._save(output_dir=save_path, state_dict=state_dict)
-
-        print(f"\n>>> Saved epoch checkpoint to: {save_path}\n")
-
-trainer = EpochSavingTrainer(
+trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=tokenized["train"],

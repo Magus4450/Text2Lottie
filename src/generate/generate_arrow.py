@@ -306,6 +306,11 @@ STATIC_TEMPLATES = [
     "An arrow shape in {color_word} with its triangular arrowhead pointing {pointing_word} and a straight body extending behind it, placed {position_word}.",
     "A {color_word} directional arrow with a sharp triangular point facing {pointing_word} and a rectangular shaft, {position_word} on the 512x512 canvas.",
     "A simple {color_word} arrow icon pointing {pointing_word}, composed of a triangular head and a rectangular body, positioned {position_word}.",
+    "A clean-lined {color_word} arrow with a triangular head and elongated {body_word} body pointing {pointing_word}, situated {position_word} on the canvas.",
+    "A {color_word} arrow featuring a pointed triangular tip oriented {pointing_word} and a solid {body_word} shaft, placed {position_word}.",
+    "A stylized {color_word} arrow with its head angled {pointing_word} and a rectangular {body_word} section, positioned precisely {position_word}.",
+    "A bold {color_word} arrow composed of a triangular head pointing {pointing_word} and a uniform {body_word} body, located {position_word}.",
+    "A centered {color_word} arrow with a triangular arrowhead facing {pointing_word} and a rectangular body behind it, positioned {position_word} on the canvas.",
 ]
 
 ANIMATION_TEMPLATES = [
@@ -314,6 +319,11 @@ ANIMATION_TEMPLATES = [
     "A {color_word} directional arrow pointing {pointing_word} {translation_phrase}{spin_phrase}{scale_phrase} over {duration_word} seconds.",
     "An arrow in {color_word} pointing {pointing_word} undergoes animation where it {translation_phrase}{spin_phrase}{scale_phrase}.",
     "A {color_word} arrow with a triangular head facing {pointing_word} {translation_phrase}{spin_phrase}{scale_phrase} in a smooth motion.",
+    "A dynamic {color_word} arrow pointing {pointing_word} that {translation_phrase}{spin_phrase}{scale_phrase} throughout the {duration_word}-second animation.",
+    "A {color_word} arrow oriented {pointing_word} performs an animation in which it {translation_phrase}{spin_phrase}{scale_phrase} over {duration_word} seconds.",
+    "An animated sequence features a {color_word} arrow pointing {pointing_word} as it {translation_phrase}{spin_phrase}{scale_phrase} continuously.",
+    "A transforming {color_word} arrow facing {pointing_word} {translation_phrase}{spin_phrase}{scale_phrase} during a {duration_word}-second motion cycle.",
+    "A {color_word} arrow with its head aimed {pointing_word} is animated so that it {translation_phrase}{spin_phrase}{scale_phrase}, completing the action in {duration_word} seconds.",
 ]
 
 
@@ -355,8 +365,8 @@ def describe_spin(rotations: float) -> str:
     
     if abs_rot == 1:
         return f"rotates {direction} once"
-    elif abs_rot == 2:
-        return f"spins {direction} twice"
+    elif abs_rot == 3:
+        return f"spins {direction} thrice"
     elif abs_rot < 1:
         return f"rotates partially {direction}"
     else:
@@ -475,12 +485,12 @@ def main():
     os.makedirs(anim_dir, exist_ok=True)
     
     # Number of total samples
-    N_SAMPLES = 100
+    N_SAMPLES = 30
     
     colors = VISIBLE_COLORS
     translation_dirs = ["right", "left"]
     translation_distances = [150, 220]
-    spin_rotations = [1, 2, -1, -2, 0.5]
+    spin_rotations = [1, 3, -1, -3, 0.5]
     scale_ranges = [(100, 100), (100, 150), (150, 100), (80, 120), (120, 80)]
     
     # Build all combinations

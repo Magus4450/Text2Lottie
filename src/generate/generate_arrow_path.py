@@ -248,23 +248,31 @@ def make_arrow_trace(
 # =========================
 # CAPTION GENERATION
 # =========================
-STATIC_TEMPLATES = [
-    "A {color_word} arrow outline pointing {direction_word}, drawn with a {stroke_word} stroke, positioned at the center of the canvas.",
-    "An outlined {color_word} arrow with a triangular head facing {direction_word}, rendered with a {stroke_word} line width.",
-    "A {color_word} arrow icon pointing {direction_word}, consisting of an outlined body and arrowhead with {stroke_word} stroke thickness.",
-    "A simple {color_word} outlined arrow pointing {direction_word}, drawn with a {stroke_word} stroke, centered on a 512x512 canvas.",
-    "An arrow outline in {color_word} with its head facing {direction_word} and a {stroke_word} line, placed at the center of the canvas.",
+STATIC_TEMPLATES = [ 
+    "A {color_word} arrow outline pointing {direction_word}, drawn with a {stroke_word} stroke, positioned at the center of the canvas.", 
+    "An outlined {color_word} arrow with a triangular head facing {direction_word}, rendered with a {stroke_word} line width, centered on a 512x512 canvas.", 
+    "A {color_word} arrow icon pointing {direction_word}, consisting of an outlined body and arrowhead with {stroke_word} stroke thickness, placed in the middle of the canvas.", 
+    "A simple {color_word} outlined arrow pointing {direction_word}, drawn with a {stroke_word} stroke and centered within the frame.", 
+    "An arrow outline in {color_word} with its head facing {direction_word} and a {stroke_word} line, positioned in the center of a plain canvas.", 
+    "A {color_word} directional arrow pointing {direction_word}, shown as an outlined shape with a uniform {stroke_word} stroke thickness at the canvas center.", 
+    "A centered {color_word} arrow outline with its tip aimed {direction_word}, using a consistent {stroke_word} stroke.", 
+    "A geometric {color_word} arrow pointing {direction_word}, drawn with a clean {stroke_word} outline and placed centrally.", 
+    "A {color_word} arrow outline oriented {direction_word}, displayed with a smooth {stroke_word} stroke at the canvas center.", 
+    "A crisp {color_word} outlined arrow facing {direction_word}, rendered using a {stroke_word} stroke and centered on a 512x512 canvas."
 ]
 
 ANIMATION_TEMPLATES = [
     "A {color_word} arrow outline pointing {direction_word} is traced {trace_phrase} at a {speed_word} pace with a {stroke_word} stroke.",
-    "An animated path-tracing effect draws a {color_word} arrow pointing {direction_word} {trace_phrase}, moving at a {speed_word} speed with {stroke_word} line thickness.",
+    "An animated path-tracing effect draws a {color_word} arrow pointing {direction_word} {trace_phrase}, moving at a {speed_word} speed with a {stroke_word} line thickness.",
     "A {color_word} outlined arrow facing {direction_word} appears through a {trace_phrase} drawing animation at {speed_word} speed, using a {stroke_word} stroke.",
     "Path tracing animation reveals a {color_word} arrow pointing {direction_word} by drawing it {trace_phrase} at a {speed_word} pace with a {stroke_word} line.",
     "A {color_word} arrow outline pointing {direction_word} is progressively drawn {trace_phrase} in a {speed_word} tracing motion with {stroke_word} stroke width.",
     "An arrow icon in {color_word} facing {direction_word} gradually appears through a {trace_phrase} path animation at {speed_word} speed, rendered with a {stroke_word} stroke.",
+    "A dynamic tracing animation draws a {color_word} arrow pointing {direction_word} {trace_phrase}, unfolding at a {speed_word} pace with a uniform {stroke_word} stroke.",
+    "A {color_word} directional arrow aimed {direction_word} emerges as its outline is drawn {trace_phrase} at a {speed_word} speed using a {stroke_word} line.",
+    "A {color_word} arrow oriented {direction_word} is sketched into view {trace_phrase} with a {stroke_word} stroke while animating at a {speed_word} rate.",
+    "A continuous path animation forms a {color_word} arrow pointing {direction_word} by tracing it {trace_phrase} at a {speed_word} pace with a {stroke_word} outline.",
 ]
-
 
 def color_name_from_hex(hex_color: str) -> str:
     """Return readable color name for a given hex code."""
@@ -278,13 +286,9 @@ def describe_stroke(width: float) -> str:
     """Return description of stroke width."""
     if width <= 4:
         return "thin"
-    elif width <= 6:
-        return "medium-thin"
-    elif width <= 8:
+    elif width <= 13:
         return "medium"
-    elif width <= 10:
-        return "medium-thick"
-    else:
+    elif width <= 40:
         return "thick"
 
 
@@ -308,9 +312,9 @@ def describe_trace_direction(trace_dir: str) -> str:
 
 def describe_size(size: int) -> str:
     """Return description of arrow size."""
-    if size <= 120:
+    if size <= 100:
         return "small"
-    elif size <= 160:
+    elif size <= 300:
         return "medium"
     else:
         return "large"
@@ -387,13 +391,13 @@ def main():
     os.makedirs(anim_dir, exist_ok=True)
     
     # Number of total samples
-    N_SAMPLES = 100
+    N_SAMPLES = 30
     
     colors = VISIBLE_COLORS
     directions = ["right", "left", "up", "down"]
-    stroke_widths = [4, 6, 8, 10, 12]
-    trace_speeds = [0.5, 0.8, 1.0, 1.5, 2.0]
-    arrow_sizes = [120, 140, 160, 180, 200]
+    stroke_widths = [4, 12, 36]
+    trace_speeds = [0.5, 1.0, 2.0]
+    arrow_sizes = [50, 200, 400]
     trace_directions = ["forward", "reverse"]
     
     # Build all combinations
