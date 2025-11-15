@@ -1,7 +1,7 @@
 
 # Model Configuration
 MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct" 
-NICKNAME = "llama_32_3B_V_FIX"
+NICKNAME = "llama_32_3B_SMOL"
 
 MAX_SEQ_LENGTH = 2048  # Maximum sequence length (reduce if OOM)
 LOAD_IN_4BIT = False    # Use 4-bit quantization (recommended)
@@ -42,11 +42,11 @@ SHUFFLE_SEED = 3407               # Random seed for shuffling
 
 
 # Output Configuration
-OUTPUT_DIR = "outputs"                      # Training checkpoints directory
+OUTPUT_DIR = f"outputs_{NICKNAME}"                      # Training checkpoints directory
 MODEL_OUTPUT_DIR = f"lottie_model_{NICKNAME}"          # Final model directory
 LORA_OUTPUT_DIR = f"lottie_model_lora_{NICKNAME}"      # LoRA adapters only directory
-SAVE_STRATEGY = "steps"                     # When to save checkpoints
-SAVE_TOTAL_LIMIT = 2                        # Maximum number of checkpoints to keep
+SAVE_STRATEGY = "epoch"                     # When to save checkpoints
+SAVE_TOTAL_LIMIT = 50                        # Maximum number of checkpoints to keep
 
 # Evaluation Configuration
 EVAL_STRATEGY = "steps"           # When to evaluate
