@@ -186,7 +186,16 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
 
     for k, v in out.items():
         print(k, len(v))
-    return out
+    
+    # only return some sample copy of out
+    if "scraped_data" in ds_name:
+        return out
+    small_out = {}
+    sampling_prop = 0.5
+    for k, v in out.items():
+        small_out[k] = np.random.choice(v, size=int(len(v) * sampling_prop), replace=False)
+
+    return small_out
 
 
 # -------------------------------------------------------------
