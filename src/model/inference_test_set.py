@@ -17,19 +17,23 @@ if torch.cuda.is_available():
 else:
     print("No CUDA device detected.")
 
+MODEL_NAME = "outputs_qwen_masked/checkpoint-1800"
+OUTPUT_DIR = f"generate_{MODEL_NAME}"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 print("Loading base model and tokenizer...")
-tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME, use_fast=True)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
 
 # -----------------------------
-# Augment tokenizer with Lottie semantic tags
-# -----------------------------
-print("Augmenting tokenizer with Lottie semantic tags/patterns...")
-_ = LottieSemanticTokenizer(tokenizer, add_as_special_tokens=False)
+# # Augment tokenizer with Lottie semantic tags
+# # -----------------------------
+# print("Augmenting tokenizer with Lottie semantic tags/patterns...")
+# _ = LottieSemanticTokenizer(tokenizer, add_as_special_tokens=False)
 
-# Ensure correct pad token
-if tokenizer.pad_token is None:
-    tokenizer.add_special_tokens({'pad_token': '<pad>'})
-tokenizer.pad_token = tokenizer.pad_token or tokenizer.eos_token
+# # Ensure correct pad token
+# if tokenizer.pad_token is None:
+#     tokenizer.add_special_tokens({'pad_token': '<pad>'})
+# tokenizer.pad_token = tokenizer.pad_token or tokenizer.eos_token
 
 # -----------------------------
 # Load base model + LoRA adapter
@@ -57,7 +61,7 @@ base_model.config.pad_token_id = tokenizer.pad_token_id
 
 print("Loading LoRA adapter weights...")
 # model = PeftModel.from_pretrained(base_model, config.MODEL_OUTPUT_DIR)
-model = PeftModel.from_pretrained(base_model, "lottie_model_llama_32_3B_V_FIX")
+model = PeftModel.from_pretrained(base_model, MODEL_NAME)
 model.eval()
 
 # -----------------------------
@@ -103,16 +107,15 @@ if __name__ == "__main__":
     with open("test.jsonl", "r") as test_set:
         lines = test_set.readlines()
     
-    MODEL_NAME = "llama_32_3B_V_FIX"
-    OUTPUT_DIR = f"generate_{MODEL_NAME}"
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 
     gold_path = os.path.join(OUTPUT_DIR, "gold")
     os.makedirs(gold_path, exist_ok=True)
     gen_path = os.path.join(OUTPUT_DIR, "gen")
     os.makedirs(gen_path, exist_ok=True)
 
-    for line in tqdm(lines, total=len(lines), desc="Eval"):
+    for i, line in enumerate(lines):
+        print(f"[{i+1}/{len(lines)}]", end=" ")
         j_line = literal_eval(line)
         base_name = j_line['id'].split("::")[-1]
         if os.path.exists(os.path.join(gen_path, f"{base_name}.json")):
@@ -133,3 +136,5 @@ if __name__ == "__main__":
         
         with open(os.path.join(gold_path, f"{base_name}.json"), "w") as f:
             f.write(gold_lottie)
+
+        print(f"Finished {base_name}")
