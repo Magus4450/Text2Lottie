@@ -21,6 +21,7 @@ generated_data
 
 /generate_llama_32_3B_V_FIX
 /dataset_variations
+/dataset_for_masked
 /big_data
 /small_data
 /outputs_*

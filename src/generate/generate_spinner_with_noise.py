@@ -385,7 +385,7 @@ def main():
     os.makedirs(anim_dir, exist_ok=True)
 
     # number of total samples you want
-    N_SAMPLES = 30  # change as desired
+    N_SAMPLES = 10  # change as desired
 
     colors = VISIBLE_COLORS
     entity_counts = [5, 10, 15]

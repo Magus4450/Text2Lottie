@@ -432,7 +432,7 @@ color_names = list(COLOR_PALETTE.keys())
 
 duration_seconds = 2.0
 
-OUT_DIR = "dataset_variations/generated_data"
+OUT_DIR = "dataset_for_masked/generated_data"
 JSON_DIR = os.path.join(OUT_DIR, "json")
 CAPTION_DIR = os.path.join(OUT_DIR, "caption")
 os.makedirs(JSON_DIR, exist_ok=True)
@@ -830,7 +830,7 @@ def sample_params():
     }
 
 # Set your target number of samples here
-N_SAMPLES = 300  # <--- change as needed
+N_SAMPLES = 80  # <--- change as needed
 RANDOM_SEED = 42  # e.g., set to 42 for reproducible sampling
 
 if RANDOM_SEED is not None:
@@ -916,5 +916,5 @@ print(f"✅ Generated {count} uniformly sampled animations")
 print(f"🎯 Target samples: {N_SAMPLES} (attempted {attempts}, dedup+skipped handled)")
 print(f"🎨 Colors: {len(color_names)} semantic colors with noise")
 print(f"📏 Sizes: {len(size_names)} semantic sizes (very small to very large)")
-print(f"📁 Output: {OUT_DIR}/json and {OUT_DIR}/caption")
+print(f"📁 Output: {OUT_DIR}/json and {OUT_DIR}/animation_caption")
 print(f"🚫 Skipped {skipped} non-animated or duplicate combinations")

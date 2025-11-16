@@ -17,8 +17,8 @@ if torch.cuda.is_available():
 else:
     print("No CUDA device detected.")
 
-MODEL_NAME = "outputs_qwen_masked/checkpoint-1800"
-OUTPUT_DIR = f"generate_{MODEL_NAME}"
+MODEL_NAME = "outputs_llama_32_3B_MASKED/checkpoint-3600"
+OUTPUT_DIR = f"{MODEL_NAME}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 print("Loading base model and tokenizer...")
@@ -104,10 +104,9 @@ def generate_response(prompt: str, max_new_tokens: int = config.MAX_SEQ_LENGTH, 
 # Example usage
 # -----------------------------
 if __name__ == "__main__":
-    with open("test.jsonl", "r") as test_set:
+    with open("masked_data_leaked/test.jsonl", "r") as test_set:
         lines = test_set.readlines()
     
-
 
     gold_path = os.path.join(OUTPUT_DIR, "gold")
     os.makedirs(gold_path, exist_ok=True)

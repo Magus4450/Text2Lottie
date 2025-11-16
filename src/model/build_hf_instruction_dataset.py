@@ -32,14 +32,14 @@ import numpy as np
 # -------------------------------------------------------------
 # CONFIG
 # -------------------------------------------------------------
-ROOT_DIR = "dataset_variations"
-WITH_STATIC = {"generated_data"}  # dataset folders that have static_json & static_caption
+ROOT_DIR = "dataset_for_masked"
+WITH_STATIC = {}  # dataset folders that have static_json & static_caption
 
 random.seed(42)
 
 def shuffle_sibling_kv(obj):
     """
-    Recursively shuffle only sibling key–value pairs in dictionaries.
+    Recursively shuffle only sibling key-value pairs in dictionaries.
     Lists are kept as-is but their elements are recursively processed.
     """
 
@@ -111,8 +111,8 @@ def read_json_files_as_string(folder: Path) -> Dict[str, str]:
             # try:
             obj = json.loads(p.read_text().strip())
             cleaned = _clean(obj)
-            s = shuffle_sibling_kv(s)
-            s = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"))
+            s = shuffle_sibling_kv(cleaned)
+            s = json.dumps(s, ensure_ascii=False, separators=(",", ":"))
 
             s = "".join(s.split())  # remove all whitespace
             data[p.stem] = s
@@ -177,6 +177,7 @@ def remove_random_layers_from_string(json_str):
     return "".join(str(json.dumps(data, indent=0)).split()), ["".join(str(k).split()) for k in removed_layers]
 
 def build_lottie_layer_masked_prompt(masked_json: str, desc: str):
+    masked_json = "".join(masked_json.split())
     return (
         "Given the description of a lottie JSON animation and its corresponding JSON with some layers removed, complete the JSON to represent the description.\n\n"
         f"Masked JSON:\n```json\n{masked_json}\n```\n\nDescription:\n{desc}"
@@ -202,6 +203,7 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
     anim_json = read_json_files_as_string(ds_path / "json")
     normal_keys = sorted(set(anim_caps) & set(anim_json))
 
+    n = len(normal_keys)
     n_train = int(n * 0.9)
     n_val = int(n * 0.05)
     np.random.shuffle(normal_keys)
@@ -234,6 +236,9 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
 
         if random.random() < 0.5:
             masked_json, removed_layers = remove_random_layers_from_string(anim_json[k])
+            if not removed_layers:
+                # breakpoint()
+                continue
             train_out["masked"].append(Example(
                 id=f"{ds_name}::masked::fwd::{k}",
                 messages=mk_messages(build_lottie_layer_masked_prompt(masked_json, anim_caps[k]), "\n".join([f"Layer {i}: {l}" for i, l in enumerate(removed_layers)])),
@@ -277,7 +282,11 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
             messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
             metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
         ))  
-    for k, v in out.items():
+    for k, v in train_out.items():
+        print(k, len(v))
+    for k, v in val_out.items():
+        print(k, len(v))
+    for k, v in test_out.items():
         print(k, len(v))
     
     # only return some sample copy of out
@@ -324,8 +333,7 @@ def write_jsonl(path, examples):
         for ex in examples:
             f.write(json.dumps({
                 "id": ex.id,
-                "messages": ex.messages,
-                "metadata": ex.metadata
+                "messages": ex.messages
             }, ensure_ascii=False) + "\n")
     print(f"[OK] Wrote {len(examples)} → {path}")
 
@@ -364,10 +372,13 @@ def main():
     val = []
     test = []
 
-    for k, (batch_train, batch_val, batch_test) in dataset_examples.items():
-        train.extend(batch_train)
-        val.extend(batch_val)
-        test.extend(batch_test)
+    for _, (batch_train, batch_val, batch_test) in dataset_examples.items():
+        for _, v in batch_train.items():
+            train.extend(v)
+        for _, v in batch_val.items():
+            val.extend(v)
+        for _, v in batch_test.items():
+            test.extend(v)
 
     # # include normal_fwd parts destined for train
     # nfwd_train_ids = {e.id for e in nfwd_train}

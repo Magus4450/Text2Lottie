@@ -7,9 +7,9 @@ from typing import List, Dict, Any
 # ---------------------------
 # Folders
 # ---------------------------
-JSON_SUBDIR = "jsons"
-CAP_SUBDIR = "captions"
-STATIC_CAP_SUBDIR = "static_captions"
+JSON_SUBDIR = "json"
+CAP_SUBDIR = "animation_caption"
+STATIC_CAP_SUBDIR = "static_caption"
 
 # ---------------------------
 # Utils
@@ -341,4 +341,4 @@ def generate_dataset(
 # CLI
 # ---------------------------
 if __name__ == "__main__":
-    generate_dataset(n=5, output_folder="dataset_variations/ripples")
+    generate_dataset(n=5, output_folder="dataset_for_masked/ripples")

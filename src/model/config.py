@@ -20,8 +20,8 @@ TARGET_MODULES = [     # Which layers to apply LoRA to
 # Training Configuration
 BATCH_SIZE = 2                    # Per device batch size
 GRADIENT_ACCUMULATION_STEPS = 4   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
-NUM_EPOCHS = 2                    # Number of training epochs
-LEARNING_RATE = 2e-4              # Learning rate
+NUM_EPOCHS = 5                    # Number of training epochs
+LEARNING_RATE = 5e-5              # Learning rate
 WARMUP_STEPS = 5                  # Number of warmup steps
 WARMUP_RATIO = 0.03
 WEIGHT_DECAY = 0.01               # Weight decay for regularization
@@ -50,8 +50,8 @@ SAVE_TOTAL_LIMIT = 50                        # Maximum number of checkpoints to 
 
 # Evaluation Configuration
 EVAL_STRATEGY = "steps"           # When to evaluate
-EVAL_STEPS = 50
-SAVE_STEPS = 100
+EVAL_STEPS = 100
+SAVE_STEPS = 300
 METRIC_FOR_BEST_MODEL="eval_loss"
 LOAD_BEST_MODEL = True           # Load best model at end based on eval loss
 
