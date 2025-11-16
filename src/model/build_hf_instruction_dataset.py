@@ -111,10 +111,8 @@ def read_json_files_as_string(folder: Path) -> Dict[str, str]:
             # try:
             obj = json.loads(p.read_text().strip())
             cleaned = _clean(obj)
-            s = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"))
-
-            # shuffle the nodes
             s = shuffle_sibling_kv(s)
+            s = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"))
 
             s = "".join(s.split())  # remove all whitespace
             data[p.stem] = s
@@ -188,7 +186,7 @@ def build_lottie_layer_masked_prompt(masked_json: str, desc: str):
 # PROCESS A SINGLE DATASET FOLDER
 # -------------------------------------------------------------
 def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
-    out = {
+    train_out = {
         "normal_fwd": [],
         "normal_rev": [],
         "static_fwd": [],
@@ -196,29 +194,39 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
         "static_augment": [],
         "masked": [],
     }
+    val_out = {"normal_fwd": []}
+    test_out = {"normal_fwd": []}
 
     # load all required components
     anim_caps = read_text_files(ds_path / "animation_caption")
     anim_json = read_json_files_as_string(ds_path / "json")
     normal_keys = sorted(set(anim_caps) & set(anim_json))
 
+    n_train = int(n * 0.9)
+    n_val = int(n * 0.05)
+    np.random.shuffle(normal_keys)
+
+    train_keys = normal_keys[:n_train]
+    val_keys = normal_keys[n_train:n_train + n_val]
+    test_keys = normal_keys[n_train + n_val:]
+
     st_caps = read_text_files(ds_path / "static_caption") if with_static else {}
     st_json = read_json_files_as_string(ds_path / "static_json") if with_static else {}
-    static_keys = sorted(set(st_caps) & set(st_json))
+    static_keys = sorted(set(st_caps) & set(st_json) & set(train_keys))
 
     triple_keys = (
-        sorted(set(st_json) & set(anim_caps) & set(anim_json))
+        sorted(set(st_json) & set(anim_caps) & set(anim_json) & set(train_keys))
         if with_static else []
     )
 
     # ---- normal ----
-    for k in normal_keys:
-        out["normal_fwd"].append(Example(
+    for k in train_keys:
+        train_out["normal_fwd"].append(Example(
             id=f"{ds_name}::normal::fwd::{k}",
             messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
             metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
         ))
-        out["normal_rev"].append(Example(
+        train_out["normal_rev"].append(Example(
             id=f"{ds_name}::normal::rev::{k}",
             messages=mk_messages(build_reverse_prompt(anim_json[k], False), anim_caps[k]),
             metadata={"dataset": ds_name, "type": "normal_rev", "key": k}
@@ -226,7 +234,7 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
 
         if random.random() < 0.5:
             masked_json, removed_layers = remove_random_layers_from_string(anim_json[k])
-            out["masked"].append(Example(
+            train_out["masked"].append(Example(
                 id=f"{ds_name}::masked::fwd::{k}",
                 messages=mk_messages(build_lottie_layer_masked_prompt(masked_json, anim_caps[k]), "\n".join([f"Layer {i}: {l}" for i, l in enumerate(removed_layers)])),
                 metadata={"dataset": ds_name, "type": "masked", "key": k}
@@ -235,19 +243,19 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
     # ---- static ----
     if with_static:
         for k in static_keys:
-            out["static_fwd"].append(Example(
+            train_out["static_fwd"].append(Example(
                 id=f"{ds_name}::static::fwd::{k}",
                 messages=mk_messages(build_forward_prompt(st_caps[k], True), st_json[k]),
                 metadata={"dataset": ds_name, "type": "static_fwd", "key": k}
             ))
-            out["static_rev"].append(Example(
+            train_out["static_rev"].append(Example(
                 id=f"{ds_name}::static::rev::{k}",
                 messages=mk_messages(build_reverse_prompt(st_json[k], True), st_caps[k]),
                 metadata={"dataset": ds_name, "type": "static_rev", "key": k}
             ))
 
         for k in triple_keys:
-            out["static_augment"].append(Example(
+            train_out["static_augment"].append(Example(
                 id=f"{ds_name}::static::augment::{k}",
                 messages=mk_messages(
                     build_static_augment_prompt(st_json[k], anim_caps[k]),
@@ -256,6 +264,19 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
                 metadata={"dataset": ds_name, "type": "static_augment", "key": k}
             ))
 
+    for k in val_keys:
+        val_out["normal_fwd"].append(Example(
+            id=f"{ds_name}::normal::fwd::{k}",
+            messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
+            metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
+        ))
+
+    for k in test_keys:
+        test_out["normal_fwd"].append(Example(
+            id=f"{ds_name}::normal::fwd::{k}",
+            messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
+            metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
+        ))  
     for k, v in out.items():
         print(k, len(v))
     
@@ -268,7 +289,7 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
     #     temp = np.random.choice(v, size=int(len(v) * sampling_prop), replace=False)
     #     small_out[k] = temp
     #     print("new:", k, len(temp))
-    return out
+    return train_out, val_out, test_out
 
 
 # -------------------------------------------------------------
@@ -329,30 +350,40 @@ def main():
         print(f"[INFO] Processing {ds_name}")
         dataset_examples[ds_name] = process_dataset(ds_name, ds_path, ds_name in WITH_STATIC)
 
-    # ---------- STRATIFIED SPLIT: ONLY NORMAL_FWD ----------
-    nfwd_train, val, test = split_normal_fwd(dataset_examples)
+    # # ---------- STRATIFIED SPLIT: ONLY NORMAL_FWD ----------
+    # nfwd_train, val, test = split_normal_fwd(dataset_examples)
 
-    for ex in val: ex.metadata["split"] = "val"
-    for ex in test: ex.metadata["split"] = "test"
+    # dataset_examples 
+    # keys -> gen_data, scraped_data
+    # val -> [train, val, test]
+    # for ex in val: ex.metadata["split"] = "val"
+    # for ex in test: ex.metadata["split"] = "test"
 
     # ---------- BUILD TRAIN ----------
     train = []
+    val = []
+    test = []
 
-    # include normal_fwd parts destined for train
-    nfwd_train_ids = {e.id for e in nfwd_train}
+    for k, (batch_train, batch_val, batch_test) in dataset_examples.items():
+        train.extend(batch_train)
+        val.extend(batch_val)
+        test.extend(batch_test)
 
-    for ds, parts in dataset_examples.items():
-        # normal_fwd: keep only those not in val/test
-        for ex in parts["normal_fwd"]:
-            if ex.id in nfwd_train_ids:
-                ex.metadata["split"] = "train"
-                train.append(ex)
+    # # include normal_fwd parts destined for train
+    # nfwd_train_ids = {e.id for e in nfwd_train}
 
-        # add all other training-only types
-        for typ in ["normal_rev", "static_fwd", "static_rev", "static_augment", "masked"]:
-            for ex in parts[typ]:
-                ex.metadata["split"] = "train"
-                train.append(ex)
+    # for ds, parts in dataset_examples.items():
+    #     # normal_fwd: keep only those not in val/test
+    #     for ex in parts["normal_fwd"]:
+    #         if ex.id in nfwd_train_ids:
+    #             ex.metadata["split"] = "train"
+    #             train.append(ex)
+
+    #     # add all other training-only types
+    #     for typ in ["normal_rev", "static_fwd", "static_rev", "static_augment", "masked"]:
+    #         for ex in parts[typ]:
+    #             ex.metadata["split"] = "train"
+    #             train.append(ex)
 
     # ---------- WRITE FILES ----------
     write_jsonl("train.jsonl", train)
