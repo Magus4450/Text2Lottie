@@ -50,8 +50,8 @@ if new_vocab != old_vocab:
 base_model.config.pad_token_id = tokenizer.pad_token_id
 
 print("Loading LoRA adapter weights...")
-model = PeftModel.from_pretrained(base_model, config.MODEL_OUTPUT_DIR)
-# model = PeftModel.from_pretrained(base_model, "outputs_llama_32_3B_SCRAPED_ONLY/checkpoint-600")
+# model = PeftModel.from_pretrained(base_model, config.MODEL_OUTPUT_DIR)
+model = PeftModel.from_pretrained(base_model, "outputs_llama_32_3B_MASKED_NO_LEAK/checkpoint-1800")
 model.eval()
 
 # -----------------------------

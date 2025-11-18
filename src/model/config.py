@@ -1,7 +1,7 @@
 
 # Model Configuration
 MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct" 
-NICKNAME = "llama_32_3B_MASKED"
+NICKNAME = "llama_32_3B_BASE"
 
 MAX_SEQ_LENGTH = 3072  # Maximum sequence length (reduce if OOM)
 LOAD_IN_4BIT = False    # Use 4-bit quantization (recommended)

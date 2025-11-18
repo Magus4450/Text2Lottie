@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 from peft import PeftModel
-from src.model.semantic_tokenizer import to_semantic, from_semantic, LottieSemanticTokenizer
+# from src.model.semantic_tokenizer import to_semantic, from_semantic, LottieSemanticTokenizer
 import src.model.config as config
 
 if torch.cuda.is_available():
@@ -52,12 +52,12 @@ base_model = AutoModelForCausalLM.from_pretrained(
     dtype=torch.float16,
 )
 
-old_vocab = base_model.get_input_embeddings().weight.size(0)
-new_vocab = len(tokenizer)
-print(f"Resizing embeddings: {old_vocab} → {new_vocab}")
-if new_vocab != old_vocab:
-    base_model.resize_token_embeddings(new_vocab, mean_resizing=False)
-base_model.config.pad_token_id = tokenizer.pad_token_id
+# old_vocab = base_model.get_input_embeddings().weight.size(0)
+# new_vocab = len(tokenizer)
+# print(f"Resizing embeddings: {old_vocab} → {new_vocab}")
+# if new_vocab != old_vocab:
+#     base_model.resize_token_embeddings(new_vocab, mean_resizing=False)
+# base_model.config.pad_token_id = tokenizer.pad_token_id
 
 print("Loading LoRA adapter weights...")
 # model = PeftModel.from_pretrained(base_model, config.MODEL_OUTPUT_DIR)
@@ -97,8 +97,8 @@ def generate_response(prompt: str, max_new_tokens: int = 1024*5, temperature: fl
         outputs = model.generate(**inputs, generation_config=gen_cfg)
 
     generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    res = from_semantic(generated_text)
-    return res, text_input
+    # res = from_semantic(generated_text)
+    return generated_text, text_input
 
 # -----------------------------
 # Example usage
@@ -106,7 +106,6 @@ def generate_response(prompt: str, max_new_tokens: int = 1024*5, temperature: fl
 if __name__ == "__main__":
     with open("test.jsonl", "r") as test_set:
         lines = test_set.readlines()
-    
 
     gold_path = os.path.join(OUTPUT_DIR, "gold")
     os.makedirs(gold_path, exist_ok=True)

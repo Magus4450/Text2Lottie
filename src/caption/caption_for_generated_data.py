@@ -2,10 +2,9 @@
 import os
 import json
 import random
-import re
 
-JSON_DIR = "dataset_variations/generated_data/json"
-STATIC_CAPTION_DIR = "dataset_variations/generated_data/static_caption"
+JSON_DIR = "dataset_for_masked/generated_data/json"
+STATIC_CAPTION_DIR = "dataset_for_masked/generated_data/static_caption"
 os.makedirs(STATIC_CAPTION_DIR, exist_ok=True)
 
 CAPTION_TEMPLATES = [
@@ -27,8 +26,9 @@ CAPTION_TEMPLATES = [
     "A visually simple {color_word} {shape_word}, {size_word} in size and {style_word} in design, located {position_word}.",
 ]
 
+
 # ------------------------------------------------------------
-# Helper: extract position from motion
+#_POSITION INFERENCE
 # ------------------------------------------------------------
 def infer_position_from_motion(motion: str) -> str:
     m = motion.lower()
@@ -42,58 +42,65 @@ def infer_position_from_motion(motion: str) -> str:
     if m == "down-to-up":
         return "at the bottom"
 
-    # Rotation → starts at dead center
+    # Rotation
     if m.startswith("clockwise") or m.startswith("anticlockwise"):
         return "at the center"
 
     return "near the center"
 
-# ------------------------------------------------------------
-# Helper: extract words from a filename
-# ------------------------------------------------------------
-# filename format:
-#   shape__motion__easing__size__color__style__scale-X__sample-Y.json
-FNAME_RE = re.compile(
-    r"^(?P<shape>[^_]+)__"
-    r"(?P<motion>[^_]+)__"
-    r"(?P<easing>[^_]+)__"
-    r"(?P<size>[^_]+)__"
-    r"(?P<color>[^_]+)__"
-    r"(?P<style>(?:dotted-gap-\d+|outline|fill))__"
-    r"scale-(?P<scale>[\d\.]+)__sample-(?P<sample>\d+)$"
-)
 
+# ------------------------------------------------------------
+#  FILENAME PARSER  (no regex, robust)
+# ------------------------------------------------------------
+# Expected structure:
+# shape__motion__easing__size__color__style__scale-X__sample-Y.json
 def parse_filename(stem: str):
-    m = FNAME_RE.match(stem)
-    if not m:
+    # Collapse triple underscores into double
+    while "___" in stem:
+        stem = stem.replace("___", "__")
+
+    parts = stem.split("__")
+    if len(parts) != 8:
         return None
-    d = m.groupdict()
 
-    # Normalize words for caption
-    shape_word = d["shape"].replace("-", " ")
-    size_word = d["size"].replace("-", " ")
-    color_word = d["color"].replace("-", " ")
+    shape      = parts[0]
+    motion     = parts[1].rstrip("_")  # drop trailing artifacts
+    easing     = parts[2]
+    size       = parts[3]
+    color      = parts[4]
+    style      = parts[5]
+    scale_part = parts[6]
+    sample_part= parts[7]
 
-    style = d["style"]
-    if style.startswith("dotted"):
+    if not scale_part.startswith("scale-"):
+        return None
+    if not sample_part.startswith("sample-"):
+        return None
+
+    # Normalize for caption
+    shape_word = shape.replace("-", " ").replace("_", " ")
+    size_word  = size.replace("_", " ").replace("-", " ")
+    color_word = color.replace("_", " ").replace("-", " ")
+    motion_word= motion.replace("_", " ").replace("-", " ")
+
+    if style.startswith("dotted-gap"):
         style_word = "dotted"
     elif style == "outline":
         style_word = "outlined"
     else:
         style_word = "filled"
 
-    motion = d["motion"].replace("-", " ")
-
     return {
         "shape_word": shape_word,
         "size_word": size_word,
         "color_word": color_word,
         "style_word": style_word,
-        "motion": motion,
+        "motion": motion_word,
     }
 
+
 # ------------------------------------------------------------
-# Main generation
+# MAIN
 # ------------------------------------------------------------
 files = [f for f in os.listdir(JSON_DIR) if f.endswith(".json")]
 print(f"Found {len(files)} JSON files")

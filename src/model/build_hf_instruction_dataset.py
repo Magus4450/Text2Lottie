@@ -33,7 +33,7 @@ import numpy as np
 # CONFIG
 # -------------------------------------------------------------
 ROOT_DIR = "dataset_for_masked"
-WITH_STATIC = {}  # dataset folders that have static_json & static_caption
+WITH_STATIC = {"SVG2Lottie","generated_data"}  # dataset folders that have static_json & static_caption
 
 random.seed(42)
 
@@ -193,14 +193,26 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
         "static_fwd": [],
         "static_rev": [],
         "static_augment": [],
-        "masked": [],
+        "normal_masked": [],
+        "static_masked": [],
     }
-    val_out = {"normal_fwd": []}
-    test_out = {"normal_fwd": []}
+    val_out = {
+        "normal_fwd": [],
+        "static_fwd": [],
+    }
+    test_out = {
+        "normal_fwd": [],
+        "static_fwd": [],
+    }
 
     # load all required components
-    anim_caps = read_text_files(ds_path / "animation_caption")
-    anim_json = read_json_files_as_string(ds_path / "json")
+    if "SVG2Lottie" not in ds_name:
+        anim_caps = read_text_files(ds_path / "animation_caption")
+        anim_json = read_json_files_as_string(ds_path / "json")
+    else:
+        anim_caps = read_text_files(ds_path / "static_caption")
+        anim_json = read_json_files_as_string(ds_path / "static_json")
+
     normal_keys = sorted(set(anim_caps) & set(anim_json))
 
     n = len(normal_keys)
@@ -212,9 +224,47 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
     val_keys = normal_keys[n_train:n_train + n_val]
     test_keys = normal_keys[n_train + n_val:]
 
+    # ---------------------------------------------------------
+    # PREFIX GROUPING ENFORCEMENT
+    # ---------------------------------------------------------
+    def get_prefix(name):
+        parts = name.split("-")
+        return "-".join(parts[:4]) if len(parts) >= 4 else name
+
+    # Build mapping prefix → list of keys
+    prefix_map = {}
+    for k in normal_keys:
+        px = get_prefix(k)
+        prefix_map.setdefault(px, []).append(k)
+
+    # Collect prefixes chosen for train
+    train_prefixes = {get_prefix(k) for k in train_keys}
+
+    # Expand train keys to include *all* items from those prefixes
+    expanded_train = set(train_keys)
+    for px in train_prefixes:
+        expanded_train.update(prefix_map.get(px, []))
+
+    # Remove entries from val/test
+    expanded_train = sorted(expanded_train)
+    expanded_train = set(expanded_train)
+
+    val_keys = [k for k in val_keys if k not in expanded_train]
+    test_keys = [k for k in test_keys if k not in expanded_train]
+
+    train_keys = sorted(expanded_train)
+
+    # -------------------
+
     st_caps = read_text_files(ds_path / "static_caption") if with_static else {}
     st_json = read_json_files_as_string(ds_path / "static_json") if with_static else {}
     static_keys = sorted(set(st_caps) & set(st_json) & set(train_keys))
+    # if "SVG2Lottie" in ds_name:
+    #     static_keys = sorted(set(st_caps) & set(st_json))
+
+    #     # control the number of static json
+    #     np.random.shuffle(static_keys)
+    #     static_keys = static_keys[:5_000]
 
     triple_keys = (
         sorted(set(st_json) & set(anim_caps) & set(anim_json) & set(train_keys))
@@ -222,66 +272,107 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
     )
 
     # ---- normal ----
-    for k in train_keys:
-        train_out["normal_fwd"].append(Example(
-            id=f"{ds_name}::normal::fwd::{k}",
-            messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
-            metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
-        ))
-        train_out["normal_rev"].append(Example(
-            id=f"{ds_name}::normal::rev::{k}",
-            messages=mk_messages(build_reverse_prompt(anim_json[k], False), anim_caps[k]),
-            metadata={"dataset": ds_name, "type": "normal_rev", "key": k}
-        ))
-
-        if random.random() < 0.5:
-            masked_json, removed_layers = remove_random_layers_from_string(anim_json[k])
-            if not removed_layers:
-                # breakpoint()
-                continue
-            train_out["masked"].append(Example(
-                id=f"{ds_name}::masked::fwd::{k}",
-                messages=mk_messages(build_lottie_layer_masked_prompt(masked_json, anim_caps[k]), "\n".join([f"Layer {i}: {l}" for i, l in enumerate(removed_layers)])),
-                metadata={"dataset": ds_name, "type": "masked", "key": k}
-            ))
+    if "SVG2Lottie" not in ds_name:
+        for k in train_keys:
+            choice = np.random.choice([1, 2, 3])
+            if choice == 1:
+                train_out["normal_fwd"].append(Example(
+                    id=f"{ds_name}::normal::fwd::{k}",
+                    messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
+                    metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
+                ))
+            elif choice == 2:
+                train_out["normal_rev"].append(Example(
+                    id=f"{ds_name}::normal::rev::{k}",
+                    messages=mk_messages(build_reverse_prompt(anim_json[k], False), anim_caps[k]),
+                    metadata={"dataset": ds_name, "type": "normal_rev", "key": k}
+                ))
+            else:
+                if random.random() <= 1:
+                    masked_json, removed_layers = remove_random_layers_from_string(anim_json[k])
+                    if not removed_layers:
+                        train_out["normal_fwd"].append(Example(
+                            id=f"{ds_name}::normal::fwd::{k}",
+                            messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
+                            metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
+                        ))
+                        continue
+                    train_out["normal_masked"].append(Example(
+                        id=f"{ds_name}::normal_masked::fwd::{k}",
+                        messages=mk_messages(build_lottie_layer_masked_prompt(masked_json, anim_caps[k]), "\n".join([f"Layer {i}: {l}" for i, l in enumerate(removed_layers)])),
+                        metadata={"dataset": ds_name, "type": "normal_masked", "key": k}
+                    ))
 
     # ---- static ----
     if with_static:
         for k in static_keys:
-            train_out["static_fwd"].append(Example(
+            choice = np.random.choice([1,2,3])
+            if choice == 1:
+                train_out["static_fwd"].append(Example(
+                    id=f"{ds_name}::static::fwd::{k}",
+                    messages=mk_messages(build_forward_prompt(st_caps[k], True), st_json[k]),
+                    metadata={"dataset": ds_name, "type": "static_fwd", "key": k}
+                ))
+            elif choice == 2:
+                train_out["static_rev"].append(Example(
+                    id=f"{ds_name}::static::rev::{k}",
+                    messages=mk_messages(build_reverse_prompt(st_json[k], True), st_caps[k]),
+                    metadata={"dataset": ds_name, "type": "static_rev", "key": k}
+                ))
+            else:
+                if random.random() <= 1:
+                    masked_json, removed_layers = remove_random_layers_from_string(st_json[k])
+                    if not removed_layers:
+                        train_out["static_fwd"].append(Example(
+                            id=f"{ds_name}::static::fwd::{k}",
+                            messages=mk_messages(build_forward_prompt(st_caps[k], True), st_json[k]),
+                            metadata={"dataset": ds_name, "type": "static_fwd", "key": k}
+                        ))
+                        continue
+                    train_out["static_masked"].append(Example(
+                        id=f"{ds_name}::static_masked::fwd::{k}",
+                        messages=mk_messages(build_lottie_layer_masked_prompt(masked_json, st_caps[k]), "\n".join([f"Layer {i}: {l}" for i, l in enumerate(removed_layers)])),
+                        metadata={"dataset": ds_name, "type": "static_masked", "key": k}
+                    ))
+
+        # for k in triple_keys:
+        #     train_out["static_augment"].append(Example(
+        #         id=f"{ds_name}::static::augment::{k}",
+        #         messages=mk_messages(
+        #             build_static_augment_prompt(st_json[k], anim_caps[k]),
+        #             anim_json[k]
+        #         ),
+        #         metadata={"dataset": ds_name, "type": "static_augment", "key": k}
+        #     ))
+
+    for k in val_keys:
+        if "SVG2Lottie" not in ds_name:
+            val_out["normal_fwd"].append(Example(
+                id=f"{ds_name}::normal::fwd::{k}",
+                messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
+                metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
+            ))
+    if with_static:
+        for k in val_keys:
+            val_out["static_fwd"].append(Example(
                 id=f"{ds_name}::static::fwd::{k}",
                 messages=mk_messages(build_forward_prompt(st_caps[k], True), st_json[k]),
                 metadata={"dataset": ds_name, "type": "static_fwd", "key": k}
             ))
-            train_out["static_rev"].append(Example(
-                id=f"{ds_name}::static::rev::{k}",
-                messages=mk_messages(build_reverse_prompt(st_json[k], True), st_caps[k]),
-                metadata={"dataset": ds_name, "type": "static_rev", "key": k}
-            ))
-
-        for k in triple_keys:
-            train_out["static_augment"].append(Example(
-                id=f"{ds_name}::static::augment::{k}",
-                messages=mk_messages(
-                    build_static_augment_prompt(st_json[k], anim_caps[k]),
-                    anim_json[k]
-                ),
-                metadata={"dataset": ds_name, "type": "static_augment", "key": k}
-            ))
-
-    for k in val_keys:
-        val_out["normal_fwd"].append(Example(
-            id=f"{ds_name}::normal::fwd::{k}",
-            messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
-            metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
-        ))
 
     for k in test_keys:
-        test_out["normal_fwd"].append(Example(
-            id=f"{ds_name}::normal::fwd::{k}",
-            messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
-            metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
-        ))  
+        if "SVG2Lottie" not in ds_name:
+            test_out["normal_fwd"].append(Example(
+                id=f"{ds_name}::normal::fwd::{k}",
+                messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
+                metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
+            ))
+        if with_static:
+            test_out["static_fwd"].append(Example(
+                id=f"{ds_name}::static::fwd::{k}",
+                messages=mk_messages(build_forward_prompt(st_caps[k], True), st_json[k]),
+                metadata={"dataset": ds_name, "type": "static_fwd", "key": k}
+            ))
     for k, v in train_out.items():
         print(k, len(v))
     for k, v in val_out.items():
