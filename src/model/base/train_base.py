@@ -11,7 +11,7 @@ from transformers import (
     DataCollatorForLanguageModeling,
 )
 # from src.model.semantic_tokenizer import LottieSemanticTokenizer, to_semantic
-import src.model.config as config
+import src.model.base.config_base as config
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 import wandb
@@ -60,25 +60,27 @@ print(model.dtype, next(model.parameters()).device)
 # -----------------------------
 # Ensure tokenizer has a pad token
 # -----------------------------
-# if tokenizer.pad_token is None:
-#     print("Tokenizer has no pad_token; adding <pad> token.")
-#     tokenizer.add_special_tokens({'pad_token': '<pad>'})
+if tokenizer.pad_token is None:
+    print("Tokenizer has no pad_token; adding <pad> token.")
+    # tokenizer.add_special_tokens({'pad_token': '<pad>'})
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
 
 # old_vocab = model.get_input_embeddings().weight.size(0)
 # new_vocab = len(tokenizer)
 # print(f"Resizing embeddings: {old_vocab} → {new_vocab}")
 # if new_vocab != old_vocab:
 #     model.resize_token_embeddings(new_vocab, mean_resizing=False)
-# model.config.pad_token_id = tokenizer.pad_token_id
+model.config.pad_token_id = tokenizer.pad_token_id
 
 model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 lora_cfg = LoraConfig(
     r=getattr(config, "LORA_R", 16),
     lora_alpha=getattr(config, "LORA_ALPHA", 16),
     lora_dropout=getattr(config, "LORA_DROPOUT", 0.0),
-    target_modules=getattr(config, "TARGET_MODULES", [
+    target_modules=[
         "q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"
-    ]),
+    ],
     bias="none",
     task_type="CAUSAL_LM",
 )
@@ -94,9 +96,10 @@ model.print_trainable_parameters()   # sanity check
 # -----------------------------
 # Load train/val/test datasets
 # -----------------------------
-DATASET_TRAIN = getattr(config, "DATASET_TRAIN", "train.jsonl")
-DATASET_VAL = getattr(config, "DATASET_VAL", "val.jsonl")
-DATASET_TEST = getattr(config, "DATASET_TEST", "test.jsonl")
+DATASET_BASE = "BASELINE_data"
+DATASET_TRAIN = f"{DATASET_BASE}/train.jsonl"
+DATASET_TEST = f"{DATASET_BASE}/test.jsonl"
+DATASET_VAL = f"{DATASET_BASE}/val.jsonl"
 NUM_PROC = getattr(config, "DATASET_NUM_PROC", 4)
 
 data_files = {}

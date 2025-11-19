@@ -830,7 +830,7 @@ def sample_params():
     }
 
 # Set your target number of samples here
-N_SAMPLES = 80  # <--- change as needed
+N_SAMPLES = 150  # <--- change as needed
 RANDOM_SEED = 42  # e.g., set to 42 for reproducible sampling
 
 if RANDOM_SEED is not None:

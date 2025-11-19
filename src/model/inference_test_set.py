@@ -17,7 +17,7 @@ if torch.cuda.is_available():
 else:
     print("No CUDA device detected.")
 
-MODEL_NAME = "outputs_llama_32_3B_MASKED_SVG2Lottie/checkpoint-2400"
+MODEL_NAME = "outputs_llama_32_3B_TOKENIZED_BASE/checkpoint-2400"
 OUTPUT_DIR = f"{MODEL_NAME}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -104,7 +104,7 @@ def generate_response(prompt: str, max_new_tokens: int = 1024*5, temperature: fl
 # Example usage
 # -----------------------------
 if __name__ == "__main__":
-    with open("test.jsonl", "r") as test_set:
+    with open("BASELINE_data/test.jsonl", "r") as test_set:
         lines = test_set.readlines()
     
 

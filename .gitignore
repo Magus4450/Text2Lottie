@@ -17,6 +17,7 @@ generated_data
 
 /wandb
 /finetune_output
+/infer_output
 *.out
 
 /generate_llama_32_3B_V_FIX
@@ -31,6 +32,8 @@ generated_data
 /BASELINE_data
 /AUG_data
 /jsonl_svg2lottie
+
+/ARCHIVE
 
 **/*.json*
 

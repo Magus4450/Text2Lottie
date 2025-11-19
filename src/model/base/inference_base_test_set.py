@@ -17,7 +17,7 @@ if torch.cuda.is_available():
 else:
     print("No CUDA device detected.")
 
-MODEL_NAME = "outputs_llama_32_3B_BASE_AUG/checkpoint-2515"
+MODEL_NAME = "outputs_llama_32_3B_TOKENIZED_BASE/checkpoint-2400"
 OUTPUT_DIR = f"{MODEL_NAME}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -68,7 +68,7 @@ model.eval()
 # -----------------------------
 # Generation function
 # -----------------------------
-def generate_response(prompt: str, max_new_tokens: int = config.MAX_SEQ_LENGTH, temperature: float = 0.7):
+def generate_response(prompt: str, max_new_tokens: int = 4096, temperature: float = 0.7):
     """
     Generate Lottie JSON or natural-language response from prompt.
     """
@@ -105,7 +105,7 @@ def generate_response(prompt: str, max_new_tokens: int = config.MAX_SEQ_LENGTH, 
 # Example usage
 # -----------------------------
 if __name__ == "__main__":
-    with open("AUG_data/test.jsonl", "r") as test_set:
+    with open("BASELINE_data/test.jsonl", "r") as test_set:
         lines = test_set.readlines()
 
     gold_path = os.path.join(OUTPUT_DIR, "gold")

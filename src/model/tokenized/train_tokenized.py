@@ -11,7 +11,7 @@ from transformers import (
     DataCollatorForLanguageModeling,
 )
 from src.model.semantic_tokenizer import LottieSemanticTokenizer, to_semantic
-import src.model.config as config
+import src.model.tokenized.config_tokenized as config
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 import wandb

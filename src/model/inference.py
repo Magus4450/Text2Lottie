@@ -12,18 +12,19 @@ else:
     print("No CUDA device detected.")
 
 print("Loading base model and tokenizer...")
-tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME, use_fast=True)
+MODEL_NAME = "outputs_llama_32_3B_MASKED_NO_LEAK/checkpoint-2100"
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
 
 # -----------------------------
 # Augment tokenizer with Lottie semantic tags
 # -----------------------------
-print("Augmenting tokenizer with Lottie semantic tags/patterns...")
-_ = LottieSemanticTokenizer(tokenizer, add_as_special_tokens=False)
+# print("Augmenting tokenizer with Lottie semantic tags/patterns...")
+# _ = LottieSemanticTokenizer(tokenizer, add_as_special_tokens=False)
 
 # Ensure correct pad token
-if tokenizer.pad_token is None:
-    tokenizer.add_special_tokens({'pad_token': '<pad>'})
-tokenizer.pad_token = tokenizer.pad_token or tokenizer.eos_token
+# if tokenizer.pad_token is None:
+#     tokenizer.add_special_tokens({'pad_token': '<pad>'})
+# tokenizer.pad_token = tokenizer.pad_token or tokenizer.eos_token
 
 # -----------------------------
 # Load base model + LoRA adapter
@@ -51,7 +52,7 @@ base_model.config.pad_token_id = tokenizer.pad_token_id
 
 print("Loading LoRA adapter weights...")
 # model = PeftModel.from_pretrained(base_model, config.MODEL_OUTPUT_DIR)
-model = PeftModel.from_pretrained(base_model, "outputs_llama_32_3B_MASKED_NO_LEAK/checkpoint-1800")
+model = PeftModel.from_pretrained(base_model, MODEL_NAME)
 model.eval()
 
 # -----------------------------

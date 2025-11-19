@@ -1,7 +1,7 @@
 
 # Model Configuration
 MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct" 
-NICKNAME = "llama_32_3b_TOKENIZED_BASE"
+NICKNAME = "llama_32_3b_BASE"
 
 MAX_SEQ_LENGTH = 3072  # Maximum sequence length (reduce if OOM)
 LOAD_IN_4BIT = False    # Use 4-bit quantization (recommended)
@@ -14,13 +14,12 @@ LORA_DROPOUT = 0       # LoRA dropout (0 is optimized)
 TARGET_MODULES = [     # Which layers to apply LoRA to
     "q_proj", "k_proj", "v_proj", "o_proj",
     "gate_proj", "up_proj", "down_proj",
-    "embed_tokens",
 ]
 
 # Training Configuration
 BATCH_SIZE = 2                    # Per device batch size
 GRADIENT_ACCUMULATION_STEPS = 4   # Effective batch size = BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS
-NUM_EPOCHS = 5                    # Number of training epochs
+NUM_EPOCHS = 3                    # Number of training epochs
 LEARNING_RATE = 5e-5              # Learning rate
 WARMUP_STEPS = 5                  # Number of warmup steps
 WARMUP_RATIO = 0.03
