@@ -17,12 +17,13 @@ if torch.cuda.is_available():
 else:
     print("No CUDA device detected.")
 
-MODEL_NAME = "outputs_llama_32_3B_MASKED_SVG2Lottie/checkpoint-2400"
+MODEL_NAME = "outputs_llama_32_3B_BASE_AUG/checkpoint-2515"
 OUTPUT_DIR = f"{MODEL_NAME}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 print("Loading base model and tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
+tokenizer.pad_token = tokenizer.eos_token
 
 # -----------------------------
 # # Augment tokenizer with Lottie semantic tags
@@ -67,15 +68,15 @@ model.eval()
 # -----------------------------
 # Generation function
 # -----------------------------
-def generate_response(prompt: str, max_new_tokens: int = 1024*5, temperature: float = 0.7):
+def generate_response(prompt: str, max_new_tokens: int = config.MAX_SEQ_LENGTH, temperature: float = 0.7):
     """
     Generate Lottie JSON or natural-language response from prompt.
     """
     # Convert to semantic if needed
-    semantic_prompt = to_semantic(prompt)
+    # semantic_prompt = to_semantic(prompt)
 
     # Apply chat template if dataset used messages format
-    chat = [{"role": "user", "content": semantic_prompt}]
+    chat = [{"role": "user", "content": prompt}]
     text_input = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
     inputs = tokenizer(
@@ -104,7 +105,7 @@ def generate_response(prompt: str, max_new_tokens: int = 1024*5, temperature: fl
 # Example usage
 # -----------------------------
 if __name__ == "__main__":
-    with open("test.jsonl", "r") as test_set:
+    with open("AUG_data/test.jsonl", "r") as test_set:
         lines = test_set.readlines()
 
     gold_path = os.path.join(OUTPUT_DIR, "gold")

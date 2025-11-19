@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=finetune_llama_32_3b_svg2lottie
-#SBATCH --output=finetune_output/finetune_llama_32_3b_svg2lottie_%j.out
+#SBATCH --job-name=finetune_llama_32_3b_tokenized_aug
+#SBATCH --output=finetune_output/finetune_llama_32_3b_tokenized_aug_%j.out
 #SBATCH --gres=gpu:1
 #SBATCH --time=24:00:00
 #SBATCH --mem=32G
@@ -8,7 +8,7 @@
 
 # Activate your environment
 source /apps/local/anaconda3/conda_init.sh
-conda activate finetuen
+conda activate llm
 
 # Run your script
-python -m src.model.train_hf
+python -m src.model.tokenized.train_tokenized

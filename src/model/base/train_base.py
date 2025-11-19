@@ -38,6 +38,7 @@ bnb_config = BitsAndBytesConfig(
 
 print("Loading base model and tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME, use_fast=True)
+tokenizer.pad_token = tokenizer.eos_token
 
 model = AutoModelForCausalLM.from_pretrained(
     config.MODEL_NAME,
@@ -121,7 +122,7 @@ def apply_chat_template(example):
         tokenize=False,
         add_generation_prompt=False,
     )
-    text = to_semantic(text)
+    # text = to_semantic(text)
     return {"text": text}
 
 for split in list(dataset_splits.keys()):

@@ -1,7 +1,7 @@
 
 # Model Configuration
 MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct" 
-NICKNAME = "llama_32_3B_BASE"
+NICKNAME = "llama_32_3B_TOKENIZED_AUG"
 
 MAX_SEQ_LENGTH = 3072  # Maximum sequence length (reduce if OOM)
 LOAD_IN_4BIT = False    # Use 4-bit quantization (recommended)
@@ -30,9 +30,9 @@ LR_SCHEDULER = "linear"           # Learning rate scheduler
 
 # Data Configuration
 DATASET_JSONL = "instruction_dataset.jsonl"
-DATASET_TRAIN = "train.jsonl"
-DATASET_TEST = "test_dup.jsonl"
-DATASET_VAL = "val.jsonl"
+DATASET_TRAIN = "AUG_data/train.jsonl"
+DATASET_TEST = "AUG_data/test.jsonl"
+DATASET_VAL = "AUG_data/val.jsonl"
 DATASET_NUM_PROC = 24  # map workers
 TRAIN_SPLIT = 0.9                 # 80% for training
 VAL_SPLIT = 0.05                   # 10% for validation
