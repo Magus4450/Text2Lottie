@@ -1,0 +1,28 @@
+Lottie Validation
+====== SUMMARY ======
+Total:   153
+Valid:   106
+Invalid: 47
+
+JSON Diff
+=== GLOBAL STATISTICS ===
+avg_key_error: 130.96226415094338
+med_key_error: 6.0
+avg_value_error: 0.3044973482752286
+med_value_error: 0.2545297468012284
+avg_category_error: 0.006187447629155229
+med_category_error: 0.0
+std_key_error: 362.6265276782791
+std_value_error: 0.1791213875014906
+std_category_error: 0.010135287201464288
+min_key_error: 0.0
+max_key_error: 2305.0
+min_value_error: 0.06640506581499286
+max_value_error: 1.151797825991522
+min_category_error: 0.0
+max_category_error: 0.0380952380952381
+num_files: 106
+
+
+=== CLIP Score ===
+Average clipped CLIP score: 0.2365

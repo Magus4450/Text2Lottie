@@ -73,7 +73,7 @@ def evaluate(json_gen, json_gold):
     extra_keys   = keys_gen - keys_gold       # generated but gold doesn't have
 
     raw_edit_distance = len(missing_keys) + len(extra_keys)
-    normalized_edit = raw_edit_distance / max(1, len(keys_gold))
+    # normalized_edit = raw_edit_distance / max(1, len(keys_gold))
 
     # ---------------------------------------------------------
     # 2. LEAF VALUE DIFFERENCE (ONLY FOR MATCHING KEYS)
@@ -132,7 +132,7 @@ def evaluate(json_gen, json_gold):
             "missing_keys": sorted(list(missing_keys)),
             "extra_keys": sorted(list(extra_keys)),
             "raw_edit_distance": raw_edit_distance,
-            "normalized_edit_distance": normalized_edit,
+            # "normalized_edit_distance": normalized_edit,
             "total_keys_gold": len(keys_gold),
         },
 
@@ -149,7 +149,6 @@ def evaluate(json_gen, json_gold):
 def main(gold_dir="gold", gen_dir="gen", output_csv="lottie_diff_results.csv"):
     rows = []
 
-    # Collect all basenames that exist in BOTH folders
     gold_files = {os.path.splitext(f)[0]: f for f in os.listdir(gold_dir) if f.endswith(".json")}
     gen_files  = {os.path.splitext(f)[0]: f for f in os.listdir(gen_dir)  if f.endswith(".json")}
 
@@ -159,24 +158,55 @@ def main(gold_dir="gold", gen_dir="gen", output_csv="lottie_diff_results.csv"):
         print("No shared JSON filenames between gold/ and gen/.")
         return
 
+    # Accumulators for global stats
+    key_errors = []
+    value_errors = []
+    category_errors = []
+
     for name in shared:
         gold_path = os.path.join(gold_dir, gold_files[name])
         gen_path  = os.path.join(gen_dir,  gen_files[name])
 
-        # Load JSONs
         with open(gold_path, "r", encoding="utf-8") as f:
             gold = json.load(f)
         with open(gen_path, "r", encoding="utf-8") as f:
             gen = json.load(f)
 
-        # Evaluate
         result = evaluate(gen, gold)
 
-        key_error       = result["key_mismatch"]["normalized_edit_distance"]
+        # key_error       = result["key_mismatch"]["normalized_edit_distance"]
+        key_error       = result["key_mismatch"]["raw_edit_distance"]
         value_error     = result["value_mismatch"]["avg_numeric_pct_diff"]
         category_error  = result["value_mismatch"]["categorical_error_rate"]
 
         rows.append([name, key_error, value_error, category_error])
+
+        # add to accumulators
+        key_errors.append(key_error)
+        value_errors.append(value_error)
+        category_errors.append(category_error)
+
+    # -----------------------------
+    # GLOBAL AGGREGATE STATISTICS
+    # -----------------------------
+    global_stats = {
+        "avg_key_error": float(np.mean(key_errors)),
+        "med_key_error": float(np.median(key_errors)),
+        "avg_value_error": float(np.mean(value_errors)),
+        "med_value_error": float(np.median(value_errors)),
+        "avg_category_error": float(np.mean(category_errors)),
+        "med_category_error": float(np.median(category_errors)),
+        "std_key_error": float(np.std(key_errors)),
+        "std_value_error": float(np.std(value_errors)),
+        "std_category_error": float(np.std(category_errors)),
+        "min_key_error": float(np.min(key_errors)),
+        "max_key_error": float(np.max(key_errors)),
+        "min_value_error": float(np.min(value_errors)),
+        "max_value_error": float(np.max(value_errors)),
+        "min_category_error": float(np.min(category_errors)),
+        "max_category_error": float(np.max(category_errors)),
+        "num_files": len(shared)
+    }
 
     # Write CSV
     with open(output_csv, "w", newline="", encoding="utf-8") as f:
@@ -185,7 +215,13 @@ def main(gold_dir="gold", gen_dir="gen", output_csv="lottie_diff_results.csv"):
         writer.writerows(rows)
 
     print(f"Saved results to {output_csv}")
-
+    
+    # -----------------------------
+    # PRINT AGGREGATE STATISTICS
+    # -----------------------------
+    print("\n=== GLOBAL STATISTICS ===")
+    for k, v in global_stats.items():
+        print(f"{k}: {v}")
 
 # ------------------------------------------------------------
 # CLI

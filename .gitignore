@@ -35,6 +35,8 @@ generated_data
 
 /ARCHIVE
 
+/src/evaluation/data
+
 **/*.json*
 
 *.zip

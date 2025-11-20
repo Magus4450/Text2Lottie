@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=finetune_llama_32_3b_tokenized_base
-#SBATCH --output=finetune_output/finetune_llama_32_3b_tokenized_base_%j.out
+#SBATCH --job-name=finetune_llama_32_3b_tokenized_base_wo_svg
+#SBATCH --output=finetune_output/finetune_llama_32_3b_tokenized_base_wo_svg_%j.out
 #SBATCH --gres=gpu:1
 #SBATCH --time=24:00:00
 #SBATCH --mem=32G

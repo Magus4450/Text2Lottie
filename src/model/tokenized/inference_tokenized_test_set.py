@@ -17,7 +17,7 @@ if torch.cuda.is_available():
 else:
     print("No CUDA device detected.")
 
-MODEL_NAME = "outputs_llama_32_3b_TOKENIZED_BASE/checkpoint-1500"
+MODEL_NAME = "outputs_llama_32_3b_TOKENIZED_BASE/checkpoint-900"
 OUTPUT_DIR = f"{MODEL_NAME}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     for i, line in enumerate(lines):
         print(f"[{i+1}/{len(lines)}]", end=" ")
         j_line = literal_eval(line)
-        base_name = j_line['id'].split("::")[-1]
+        base_name = "-".join(j_line['id'].split("::")[-3:])
         if os.path.exists(os.path.join(gen_path, f"{base_name}.json")):
             print(f"Skipping {base_name}")
             continue

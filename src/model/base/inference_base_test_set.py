@@ -17,13 +17,13 @@ if torch.cuda.is_available():
 else:
     print("No CUDA device detected.")
 
-MODEL_NAME = "outputs_llama_32_3b_BASE/checkpoint-1500"
+MODEL_NAME = "outputs_llama_32_3b_BASE/checkpoint-900"
 OUTPUT_DIR = f"{MODEL_NAME}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 print("Loading base model and tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
-tokenizer.pad_token = tokenizer.eos_token
+# tokenizer.pad_token = tokenizer.eos_token
 
 # -----------------------------
 # # Augment tokenizer with Lottie semantic tags
@@ -53,12 +53,12 @@ base_model = AutoModelForCausalLM.from_pretrained(
     dtype=torch.float16,
 )
 
-# old_vocab = base_model.get_input_embeddings().weight.size(0)
-# new_vocab = len(tokenizer)
-# print(f"Resizing embeddings: {old_vocab} → {new_vocab}")
-# if new_vocab != old_vocab:
-#     base_model.resize_token_embeddings(new_vocab, mean_resizing=False)
-# base_model.config.pad_token_id = tokenizer.pad_token_id
+old_vocab = base_model.get_input_embeddings().weight.size(0)
+new_vocab = len(tokenizer)
+print(f"Resizing embeddings: {old_vocab} → {new_vocab}")
+if new_vocab != old_vocab:
+    base_model.resize_token_embeddings(new_vocab, mean_resizing=False)
+base_model.config.pad_token_id = tokenizer.pad_token_id
 
 print("Loading LoRA adapter weights...")
 # model = PeftModel.from_pretrained(base_model, config.MODEL_OUTPUT_DIR)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     for i, line in enumerate(lines):
         print(f"[{i+1}/{len(lines)}]", end=" ")
         j_line = literal_eval(line)
-        base_name = j_line['id'].split("::")[-1]
+        base_name = "-".join(j_line['id'].split("::")[-3:])
         if os.path.exists(os.path.join(gen_path, f"{base_name}.json")):
             print(f"Skipping {base_name}")
             continue
