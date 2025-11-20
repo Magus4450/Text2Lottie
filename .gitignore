@@ -29,8 +29,8 @@ generated_data
 /masked_data*
 /small_variations_data
 
-/BASELINE_data
-/AUG_data
+/BASELINE_data*
+/AUG_data*
 /jsonl_svg2lottie
 
 /ARCHIVE

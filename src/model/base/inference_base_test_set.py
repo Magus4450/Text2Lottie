@@ -17,7 +17,7 @@ if torch.cuda.is_available():
 else:
     print("No CUDA device detected.")
 
-MODEL_NAME = "outputs_llama_32_3B_TOKENIZED_BASE/checkpoint-2400"
+MODEL_NAME = "outputs_llama_32_3b_BASE/checkpoint-1500"
 OUTPUT_DIR = f"{MODEL_NAME}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 

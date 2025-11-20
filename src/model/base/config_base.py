@@ -14,6 +14,7 @@ LORA_DROPOUT = 0       # LoRA dropout (0 is optimized)
 TARGET_MODULES = [     # Which layers to apply LoRA to
     "q_proj", "k_proj", "v_proj", "o_proj",
     "gate_proj", "up_proj", "down_proj",
+    "embed_tokens",
 ]
 
 # Training Configuration

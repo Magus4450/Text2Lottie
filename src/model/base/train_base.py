@@ -38,7 +38,7 @@ bnb_config = BitsAndBytesConfig(
 
 print("Loading base model and tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME, use_fast=True)
-tokenizer.pad_token = tokenizer.eos_token
+# tokenizer.pad_token = tokenizer.eos_token
 
 model = AutoModelForCausalLM.from_pretrained(
     config.MODEL_NAME,
@@ -62,15 +62,15 @@ print(model.dtype, next(model.parameters()).device)
 # -----------------------------
 if tokenizer.pad_token is None:
     print("Tokenizer has no pad_token; adding <pad> token.")
-    # tokenizer.add_special_tokens({'pad_token': '<pad>'})
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.pad_token_id = tokenizer.eos_token_id
+    tokenizer.add_special_tokens({'pad_token': '<pad>'})
+    # tokenizer.pad_token = tokenizer.eos_token
+    # tokenizer.pad_token_id = tokenizer.eos_token_id
 
-# old_vocab = model.get_input_embeddings().weight.size(0)
-# new_vocab = len(tokenizer)
-# print(f"Resizing embeddings: {old_vocab} → {new_vocab}")
-# if new_vocab != old_vocab:
-#     model.resize_token_embeddings(new_vocab, mean_resizing=False)
+old_vocab = model.get_input_embeddings().weight.size(0)
+new_vocab = len(tokenizer)
+print(f"Resizing embeddings: {old_vocab} → {new_vocab}")
+if new_vocab != old_vocab:
+    model.resize_token_embeddings(new_vocab, mean_resizing=False)
 model.config.pad_token_id = tokenizer.pad_token_id
 
 model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
@@ -78,9 +78,9 @@ lora_cfg = LoraConfig(
     r=getattr(config, "LORA_R", 16),
     lora_alpha=getattr(config, "LORA_ALPHA", 16),
     lora_dropout=getattr(config, "LORA_DROPOUT", 0.0),
-    target_modules=[
+    target_modules=getattr(config, "TARGET_MODULES", [
         "q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"
-    ],
+    ]),
     bias="none",
     task_type="CAUSAL_LM",
 )

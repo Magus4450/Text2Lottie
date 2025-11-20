@@ -126,14 +126,14 @@ def read_json_files_as_string(folder: Path) -> Dict[str, str]:
 # -------------------------------------------------------------
 def build_forward_prompt(caption: str, static: bool):
     if static:
-        return f"Generate a static lottie JSON animation given the following description:\n{caption}"
-    return f"Generate a lottie JSON animation given the following description:\n{caption}"
+        return f"Generate lottie JSON with only the object following instruction:\n{caption}. Only return a JSON."
+    return f"Generate a lottie JSON animation given the following description:\n{caption}. Only return a JSON."
 
 
 def build_reverse_prompt(json_str: str, static: bool):
     if static:
         return (
-            f"What does the following static lottie JSON animation represent?\n\n"
+            f"What is the object that is represented by this Lottie JSON?\n\n"
             f"```json\n{json_str}\n```"
         )
     return (
@@ -144,7 +144,7 @@ def build_reverse_prompt(json_str: str, static: bool):
 
 def build_static_augment_prompt(static_json: str, desc: str):
     return (
-        "Given a static lottie JSON animation, add animation with the given description.\n\n"
+        "Given a lottie JSON of a static object, add animation to it following the given description.\n\n"
         f"Static:\n```json\n{static_json}\n```\n\nDescription:\n{desc}"
     )
 
@@ -184,7 +184,7 @@ def build_lottie_layer_masked_prompt(masked_json: str, desc: str):
     masked_json = "".join(masked_json.split())
     return (
         "Given the description of a lottie JSON animation and its corresponding JSON with some layers removed, complete the JSON to represent the description.\n\n"
-        f"Masked JSON:\n```json\n{masked_json}\n```\n\nDescription:\n{desc}"
+        f"Masked JSON:\n```json\n{masked_json}\n```\n\nDescription:\n{desc}\n. Only return a JSON."
     )
 
 # -------------------------------------------------------------
@@ -278,66 +278,66 @@ def process_dataset(ds_name: str, ds_path: Path, with_static: bool):
     # ---- normal ----
     if "SVG2Lottie" not in ds_name:
         for k in train_keys:
-            # choice = np.random.random()
-            # if choice <= 0.5:
-            train_out["normal_fwd"].append(Example(
-                id=f"{ds_name}::normal::fwd::{k}",
-                messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
-                metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
-            ))
-            # if choice <= 0.8 and choice > 0.45:
-            #     train_out["normal_rev"].append(Example(
-            #         id=f"{ds_name}::normal::rev::{k}",
-            #         messages=mk_messages(build_reverse_prompt(anim_json[k], False), anim_caps[k]),
-            #         metadata={"dataset": ds_name, "type": "normal_rev", "key": k}
-            #     ))
-            # if choice >= 0.75:
-            #     if random.random() <= 1:
-            #         masked_json, removed_layers = remove_random_layers_from_string(anim_json[k])
-            #         if not removed_layers:
-            #             train_out["normal_fwd"].append(Example(
-            #                 id=f"{ds_name}::normal::fwd::{k}",
-            #                 messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
-            #                 metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
-            #             ))
-            #             continue
-            #         train_out["normal_masked"].append(Example(
-            #             id=f"{ds_name}::normal_masked::fwd::{k}",
-            #             messages=mk_messages(build_lottie_layer_masked_prompt(masked_json, anim_caps[k]), "\n".join([f"Layer {i}: {l}" for i, l in enumerate(removed_layers)])),
-            #             metadata={"dataset": ds_name, "type": "normal_masked", "key": k}
-            #         ))
+            choice = np.random.random()
+            if choice <= 0.5:
+                train_out["normal_fwd"].append(Example(
+                    id=f"{ds_name}::normal::fwd::{k}",
+                    messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
+                    metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
+                ))
+            if choice <= 0.8 and choice > 0.45:
+                train_out["normal_rev"].append(Example(
+                    id=f"{ds_name}::normal::rev::{k}",
+                    messages=mk_messages(build_reverse_prompt(anim_json[k], False), anim_caps[k]),
+                    metadata={"dataset": ds_name, "type": "normal_rev", "key": k}
+                ))
+            if choice >= 0.75:
+                if random.random() <= 1:
+                    masked_json, removed_layers = remove_random_layers_from_string(anim_json[k])
+                    if not removed_layers:
+                        train_out["normal_fwd"].append(Example(
+                            id=f"{ds_name}::normal::fwd::{k}",
+                            messages=mk_messages(build_forward_prompt(anim_caps[k], False), anim_json[k]),
+                            metadata={"dataset": ds_name, "type": "normal_fwd", "key": k}
+                        ))
+                        continue
+                    train_out["normal_masked"].append(Example(
+                        id=f"{ds_name}::normal_masked::fwd::{k}",
+                        messages=mk_messages(build_lottie_layer_masked_prompt(masked_json, anim_caps[k]), "\n".join([f"Layer {i}: {l}" for i, l in enumerate(removed_layers)])),
+                        metadata={"dataset": ds_name, "type": "normal_masked", "key": k}
+                    ))
 
     # ---- static ----
     if with_static:
         for k in static_keys:
-            # choice = np.random.random()
-            # if choice <= 0.5:
-            train_out["static_fwd"].append(Example(
-                id=f"{ds_name}::static::fwd::{k}",
-                messages=mk_messages(build_forward_prompt(st_caps[k], True), st_json[k]),
-                metadata={"dataset": ds_name, "type": "static_fwd", "key": k}
-            ))
-            # if choice <= 0.8 and choice > 0.45:
-            #     train_out["static_rev"].append(Example(
-            #         id=f"{ds_name}::static::rev::{k}",
-            #         messages=mk_messages(build_reverse_prompt(st_json[k], True), st_caps[k]),
-            #         metadata={"dataset": ds_name, "type": "static_rev", "key": k}
-            #     ))
-            # if choice >= 0.75:
-            #     if random.random() <= 1:
-            #         masked_json, removed_layers = remove_random_layers_from_string(st_json[k])
-            #         if not removed_layers:
-            #             train_out["static_fwd"].append(Example(
-            #                 id=f"{ds_name}::static::fwd::{k}",
-            #                 messages=mk_messages(build_forward_prompt(st_caps[k], True), st_json[k]),
-            #                 metadata={"dataset": ds_name, "type": "static_fwd", "key": k}
-            #             ))
-            #             continue
-            #         train_out["static_masked"].append(Example(
-            #             id=f"{ds_name}::static_masked::fwd::{k}",
-            #             messages=mk_messages(build_lottie_layer_masked_prompt(masked_json, st_caps[k]), "\n".join([f"Layer {i}: {l}" for i, l in enumerate(removed_layers)])),
-            #             metadata={"dataset": ds_name, "type": "static_masked", "key": k}
-            #         ))
+            choice = np.random.random()
+            if choice <= 0.5:
+                train_out["static_fwd"].append(Example(
+                    id=f"{ds_name}::static::fwd::{k}",
+                    messages=mk_messages(build_forward_prompt(st_caps[k], True), st_json[k]),
+                    metadata={"dataset": ds_name, "type": "static_fwd", "key": k}
+                ))
+            if choice <= 0.8 and choice > 0.45:
+                train_out["static_rev"].append(Example(
+                    id=f"{ds_name}::static::rev::{k}",
+                    messages=mk_messages(build_reverse_prompt(st_json[k], True), st_caps[k]),
+                    metadata={"dataset": ds_name, "type": "static_rev", "key": k}
+                ))
+            if choice >= 0.75:
+                if random.random() <= 1:
+                    masked_json, removed_layers = remove_random_layers_from_string(st_json[k])
+                    if not removed_layers:
+                        train_out["static_fwd"].append(Example(
+                            id=f"{ds_name}::static::fwd::{k}",
+                            messages=mk_messages(build_forward_prompt(st_caps[k], True), st_json[k]),
+                            metadata={"dataset": ds_name, "type": "static_fwd", "key": k}
+                        ))
+                        continue
+                    train_out["static_masked"].append(Example(
+                        id=f"{ds_name}::static_masked::fwd::{k}",
+                        messages=mk_messages(build_lottie_layer_masked_prompt(masked_json, st_caps[k]), "\n".join([f"Layer {i}: {l}" for i, l in enumerate(removed_layers)])),
+                        metadata={"dataset": ds_name, "type": "static_masked", "key": k}
+                    ))
         # if "SVG2Lottie" not in ds_name:
         #     for k in triple_keys:
         #         if np.random.random() < 0.3:

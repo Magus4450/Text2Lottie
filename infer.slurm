@@ -11,4 +11,4 @@ source /apps/local/anaconda3/conda_init.sh
 conda activate finetuen
 
 # Run your script
-python -m src.model.inference_test_set
+python -m src.model.tokenized.inference_tokenized_test_set

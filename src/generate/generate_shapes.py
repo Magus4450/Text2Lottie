@@ -6,6 +6,7 @@ import re
 
 # Color palette with semantic names
 COLOR_PALETTE = {
+    # Existing
     "red": "#E53E3E",
     "blue": "#3B82F6",
     "green": "#10B981",
@@ -26,7 +27,62 @@ COLOR_PALETTE = {
     "mint": "#6EE7B7",
     "coral": "#FF6B6B",
     "lavender": "#A78BFA",
+
+    # --- NEW ADDITIONS ---
+
+    # Neutrals
+    "white": "#FFFFFF",
+    "black": "#000000",
+    "charcoal": "#36454F",
+    "slate": "#64748B",
+    "stone": "#78716C",
+    "sand": "#C2B280",
+
+    # Earth tones
+    "brown": "#A0522D",
+    "umber": "#635147",
+    "coffee": "#6F4E37",
+    "khaki": "#C3B091",
+    "forest": "#228B22",
+    "olive": "#808000",
+    "moss": "#6A7956",
+
+    # Pastels
+    "peach": "#FFD1B3",
+    "apricot": "#FBCEB1",
+    "blush": "#F9C5D5",
+    "periwinkle": "#CCCCFF",
+    "baby_blue": "#89CFF0",
+
+    # Intense tones
+    "crimson": "#DC143C",
+    "burgundy": "#800020",
+    "navy": "#001F54",
+    "royal_blue": "#4169E1",
+    "emerald_dark": "#046C4E",
+    "jade": "#00A86B",
+
+    # Highlights
+    "gold": "#FFD700",
+    "silver": "#C0C0C0",
+    "bronze": "#CD7F32",
+
+    # Warm vivid
+    "sunset": "#FF4500",
+    "fire": "#FF4D00",
+    "marigold": "#FDB813",
+
+    # Cool vivid
+    "turquoise": "#40E0D0",
+    "aqua": "#00FFFF",
+    "ice": "#D6F4FF",
+
+    # Florescent / funky
+    "neon_green": "#39FF14",
+    "neon_pink": "#FF6EC7",
+    "neon_blue": "#4D4DFF",
 }
+
 
 # Size definitions (as percentage of min canvas dimension)
 SIZE_DEFINITIONS = {
@@ -35,6 +91,7 @@ SIZE_DEFINITIONS = {
     "medium": 0.25,        # 25% of canvas
     "large": 0.35,         # 35% of canvas
     "very large": 0.45,    # 45% of canvas
+    "extremely large": 0.7,
 }
 
 def generate_lottie_shape(
@@ -403,7 +460,7 @@ def generate_lottie_shape(
 # === UNIFORM SAMPLING GENERATION (replace the old GENERATE block) ===
 
 motions_linear = ["left-to-right", "right-to-left", "up-to-down", "down-to-up"]
-angle_set = [90, 180, 270]
+angle_set = [90, 180, 270, 125, 225, 45, 50, 60]
 motions_rotate = (
     ["clockwise", "anticlockwise"]
     + [f"clockwise({a})" for a in angle_set]
@@ -434,7 +491,7 @@ duration_seconds = 2.0
 
 OUT_DIR = "dataset_for_masked/generated_data"
 JSON_DIR = os.path.join(OUT_DIR, "json")
-CAPTION_DIR = os.path.join(OUT_DIR, "caption")
+CAPTION_DIR = os.path.join(OUT_DIR, "animation_caption")
 os.makedirs(JSON_DIR, exist_ok=True)
 os.makedirs(CAPTION_DIR, exist_ok=True)
 
@@ -554,17 +611,26 @@ STYLE_PHRASES = {
     "dotted": [
         "dotted",
         "dot-pattern",
-        "dotted-line"
+        "dotted-line",
+        "fine-dotted",
+        "small-dot style",
+        "light dotted pattern"
     ],
     "outlined": [
         "outlined",
         "stroke-only",
-        "line-art style"
+        "line-art style",
+        "thin-outline style",
+        "minimal outline",
+        "clean stroke outline"
     ],
     "filled": [
         "filled",
         "solid",
-        "fully filled-in"
+        "fully filled-in",
+        "solid-fill style",
+        "flat-color fill",
+        "uniformly filled"
     ]
 }
 
@@ -572,36 +638,54 @@ EASING_PHRASES = {
     "ease-in": [
         "using ease-in easing",
         "starting slowly with ease-in easing",
-        "animated with an ease-in acceleration"
+        "animated with an ease-in acceleration",
+        "beginning gently with ease-in motion",
+        "gradually accelerating through ease-in",
+        "with a soft ease-in start"
     ],
     "ease-out": [
         "using ease-out easing",
         "slowing down with ease-out easing",
-        "animated with an ease-out deceleration"
+        "animated with an ease-out deceleration",
+        "ending gently with ease-out motion",
+        "gradually slowing via ease-out",
+        "with a smooth ease-out finish"
     ],
     "linear": [
         "with linear easing",
         "moving at a steady linear rate",
-        "animated at constant linear speed"
+        "animated at constant linear speed",
+        "progressing with uniform linear motion",
+        "using consistent linear pacing",
+        "moving evenly with linear timing"
     ]
 }
 
 SCALE_TEMPLATES = [
-    "and scales to {scaling:g}× its size",
-    "scaling up to {scaling:g}× its original size",
-    "changing size to {scaling:g}×",
+    "and scales to {scaling:g}x its size",
+    "scaling up to {scaling:g}x its original size",
+    "changing size to {scaling:g}x",
+    "growing to {scaling:g}x its size",
+    "expanding to {scaling:g}x scale",
+    "increasing its size to {scaling:g}x"
 ]
 
 NO_SCALE_TEMPLATES = [
     "and keeps its size",
     "without changing its size",
-    "while maintaining its original size"
+    "while maintaining its original size",
+    "keeping a constant size",
+    "retaining the same size throughout",
+    "remaining unscaled"
 ]
 
 MOTION_TEMPLATES = [
-    "that {motion_phrase}{scale_phrase}",
-    "which {motion_phrase}{scale_phrase}",
-    "as it {motion_phrase}{scale_phrase}",
+    "that {motion_phrase} {scale_phrase}",
+    "which {motion_phrase} {scale_phrase}",
+    "as it {motion_phrase} {scale_phrase}",
+    "where it {motion_phrase} {scale_phrase}",
+    "while it {motion_phrase} {scale_phrase}",
+    "as the shape {motion_phrase} {scale_phrase}"
 ]
 
 DURATION_TEMPLATES = [
@@ -609,12 +693,19 @@ DURATION_TEMPLATES = [
     "throughout a {duration_s}-second animation",
     "within {duration_s} seconds",
     "completed in {duration_s} seconds",
+    "taking {duration_s} seconds",
+    "spanning {duration_s} seconds",
+    "lasting for {duration_s} seconds"
 ]
 
 CAPTION_TEMPLATES = [
-    "A {size_name} {color_name} {style} {noun}{spacing_detail} {motion_clause}, {easing_clause}, {duration_clause}.",
-    "A {size_name} {color_name} {style} {noun}{spacing_detail} {motion_clause} {easing_clause} {duration_clause}.",
-    "This {size_name} {color_name} {style} {noun}{spacing_detail} {motion_clause}, {easing_clause}, lasting {duration_clause}.",
+    "A {size_name} {color_name} {style} {noun} {spacing_detail} {motion_clause}, {easing_clause}, {duration_clause}.",
+    "A {size_name} {color_name} {style} {noun} {spacing_detail} {motion_clause} {easing_clause} {duration_clause}.",
+    "This {size_name} {color_name} {style} {noun} {spacing_detail} {motion_clause}, {easing_clause}, lasting {duration_clause}.",
+    "The {size_name} {color_name} {style} {noun} {spacing_detail} {motion_clause} {easing_clause}, completed {duration_clause}.",
+    "Here, a {size_name} {color_name} {style} {noun} {spacing_detail} {motion_clause}, paired with {easing_clause}, over {duration_clause}.",
+    "A {size_name} {color_name} {style} {noun} {spacing_detail} gracefully {motion_clause}, enhanced by {easing_clause}, {duration_clause}.",
+    "This {size_name} {color_name} {style} {noun} {spacing_detail} performs the motion as it {motion_clause}, using {easing_clause}, {duration_clause}.",
 ]
 
 # -----------------------------
@@ -667,26 +758,75 @@ def shape_noun(shape: str) -> str:
 
     # small variation options
     if kind == "circle":
-        return choose(["circle", "circular shape"])
+        return choose([
+            "circle",
+            "circular shape",
+            "perfect circle",
+            "round shape",
+            "smooth circle",
+            "simple circle"
+        ])
+
     if kind == "square":
-        return choose(["square", "four-sided square"])
+        return choose([
+            "square",
+            "four-sided square",
+            "geometric square",
+            "even-sided square",
+            "perfect square",
+            "solid square"
+        ])
+
     if kind == "rounded-square":
-        return choose(["rounded square", "soft-cornered square"])
+        return choose([
+            "rounded square",
+            "soft-cornered square",
+            "rounded-edge square",
+            "smooth-corner square",
+            "curved-corner square",
+            "soft square"
+        ])
+
     if kind == "triangle":
-        return choose(["triangle", "three-sided triangle"])
+        return choose([
+            "triangle",
+            "three-sided triangle",
+            "geometric triangle",
+            "simple triangle",
+            "sharp triangle",
+            "angular triangle"
+        ])
+
     if kind == "polygon":
         try:
             n = max(3, int(arg)) if arg else 5
         except ValueError:
             n = 5
-        return choose([f"{n}-sided polygon", f"{n}-gon"])
+        return choose([
+            f"{n}-sided polygon",
+            f"{n}-gon",
+            f"geometric {n}-gon",
+            f"{n}-edge polygon",
+            f"regular {n}-gon",
+            f"{n}-vertex polygon"
+        ])
+
     if kind == "star":
         try:
             p = max(3, int(arg)) if arg else 5
         except ValueError:
             p = 5
-        return choose([f"{p}-point star", f"{p}-pointed star"])
+        return choose([
+            f"{p}-point star",
+            f"{p}-pointed star",
+            f"{p}-arm star",
+            f"{p}-spiked star",
+            f"regular {p}-point star",
+            f"{p}-tip star"
+        ])
+
     return s
+
 
 
 # -----------------------------
@@ -700,34 +840,59 @@ def describe_motion(m: str) -> str:
         "left-to-right": [
             "moves from left to right",
             "slides horizontally from left to right",
-            "shifts left to right"
+            "shifts left to right",
+            "glides from the left side to the right",
+            "translates smoothly left to right",
+            "travels across the frame from left to right",
+            "sweeps horizontally toward the right"
         ],
         "right-to-left": [
             "moves from right to left",
             "slides right to left",
-            "shifts horizontally toward the left"
+            "shifts horizontally toward the left",
+            "glides from the right side to the left",
+            "translates smoothly right to left",
+            "travels across the frame from right to left",
+            "sweeps horizontally toward the left"
         ],
         "up-to-down": [
             "moves downward",
             "drops from top to bottom",
-            "shifts from up to down"
+            "shifts from up to down",
+            "descends vertically",
+            "glides downward",
+            "travels from the upper area toward the lower",
+            "falls smoothly downward"
         ],
         "down-to-up": [
             "moves upward",
             "rises from bottom to top",
-            "shifts from down to up"
+            "shifts from down to up",
+            "ascends vertically",
+            "glides upward",
+            "travels from the lower area toward the upper",
+            "floats smoothly upward"
         ],
         "clockwise": [
             "spins clockwise",
             "rotates in a clockwise direction",
-            "turns clockwise"
+            "turns clockwise",
+            "whirls clockwise",
+            "circles around clockwise",
+            "rotates smoothly clockwise",
+            "twists in a clockwise motion"
         ],
         "anticlockwise": [
             "spins anticlockwise",
             "rotates in an anticlockwise direction",
-            "turns anticlockwise"
+            "turns anticlockwise",
+            "whirls anticlockwise",
+            "circles around anticlockwise",
+            "rotates smoothly anticlockwise",
+            "twists in an anticlockwise motion"
         ]
     }
+
 
     if m in table:
         return choose(table[m])
@@ -740,14 +905,27 @@ def describe_motion(m: str) -> str:
             return choose([
                 f"rotates clockwise to {ang:g}°",
                 f"turns clockwise up to {ang:g}°",
-                f"spins clockwise reaching {ang:g}°"
+                f"spins clockwise reaching {ang:g}°",
+                f"rotates in a clockwise motion until {ang:g}°",
+                f"twists clockwise to an angle of {ang:g}°",
+                f"whirls clockwise toward {ang:g}°",
+                f"rotates steadily clockwise until it reaches {ang:g}°",
+                f"continues clockwise rotation up to {ang:g}°",
+                f"moves in a clockwise arc reaching {ang:g}°"
             ])
         else:
             return choose([
                 f"rotates anticlockwise to {ang:g}°",
                 f"turns anticlockwise up to {ang:g}°",
-                f"spins anticlockwise reaching {ang:g}°"
+                f"spins anticlockwise reaching {ang:g}°",
+                f"rotates in an anticlockwise motion until {ang:g}°",
+                f"twists anticlockwise to an angle of {ang:g}°",
+                f"whirls anticlockwise toward {ang:g}°",
+                f"rotates steadily anticlockwise until it reaches {ang:g}°",
+                f"continues anticlockwise rotation up to {ang:g}°",
+                f"moves in an anticlockwise arc reaching {ang:g}°"
             ])
+
 
     return choose(["moves", "shifts", "animates"])
 
@@ -830,7 +1008,7 @@ def sample_params():
     }
 
 # Set your target number of samples here
-N_SAMPLES = 150  # <--- change as needed
+N_SAMPLES = 1015  # <--- change as needed
 RANDOM_SEED = 42  # e.g., set to 42 for reproducible sampling
 
 if RANDOM_SEED is not None:
