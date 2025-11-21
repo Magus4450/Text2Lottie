@@ -1,0 +1,30 @@
+Lottie Validation
+========== SUMMARY ==========
+Total JSONs:            153
+Valid (non-flat):       91
+Invalid (JSON):         33
+Invalid (export err):   29
+Flat videos:            0
+TOTAL invalid:          62
+
+JSON Diff
+=== GLOBAL STATISTICS ===
+avg_key_error: 197.57142857142858
+med_key_error: 5.0
+avg_value_error: 0.32526986635435884
+med_value_error: 0.26468697522358337
+avg_category_error: 0.00726926494661053
+med_category_error: 0.0
+std_key_error: 430.1023681587459
+std_value_error: 0.18576803214198487
+std_category_error: 0.012757706770117762
+min_key_error: 0.0
+max_key_error: 1695.0
+min_value_error: 0.08732566280206712
+max_value_error: 0.836926194881508
+min_category_error: 0.0
+max_category_error: 0.06451612903225806
+num_files: 91
+
+=== CLIP Score ===
+Average clipped CLIP score: 0.2822
